@@ -1,0 +1,104 @@
+@use '@angular/material' as mat;
+
+html {
+  color-scheme: light;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$cyan-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+:root {
+  --viru-ok: #1b7f4b;
+  --viru-ok-bg: #e3f4ea;
+  --viru-warn: #b3261e;
+  --viru-warn-bg: #fce8e6;
+  --viru-muted: #5f6368;
+  --viru-muted-bg: #eceff1;
+  --viru-page: #f4f7fa;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  background: var(--viru-page);
+  color: var(--mat-sys-on-surface);
+}
+
+// ---- Piezas compartidas entre pantallas ----
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  // Material 3 pinta la toolbar con estos tokens
+  --mat-toolbar-container-background-color: var(--mat-sys-primary);
+  --mat-toolbar-container-text-color: var(--mat-sys-on-primary);
+  --mat-icon-button-icon-color: var(--mat-sys-on-primary);
+
+  .titulo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+  }
+  .espacio {
+    flex: 1;
+  }
+  .usuario {
+    font-size: 14px;
+    margin-right: 8px;
+  }
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+
+  &.ok {
+    color: var(--viru-ok);
+    background: var(--viru-ok-bg);
+  }
+  &.warn {
+    color: var(--viru-warn);
+    background: var(--viru-warn-bg);
+  }
+  &.muted {
+    color: var(--viru-muted);
+    background: var(--viru-muted-bg);
+  }
+}
+
+.demo-banner {
+  background: #fff4ce;
+  color: #5c4400;
+  text-align: center;
+  font-size: 13px;
+  padding: 6px;
+}
+
+.full {
+  width: 100%;
+}

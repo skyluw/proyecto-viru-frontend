@@ -1,0 +1,81 @@
+<app-barra-superior subtitulo="Agricultor" />
+
+@if (cargando()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+<main class="page angosta">
+  <header class="encabezado">
+    <h1>Hola, {{ auth.usuario()?.nombre }}</h1>
+    <p class="sub">
+      Avisos de riego y alertas de caudal de tu junta
+      @if (actualizadoEn()) {
+        · actualizado {{ actualizadoEn() | date: 'HH:mm' }}
+      }
+    </p>
+  </header>
+
+  <section class="resumen">
+    <mat-card appearance="outlined" class="kpi destacado">
+      <span class="kpi-label"><mat-icon>schedule</mat-icon> Próximo riego</span>
+      @if (proximoRiego(); as r) {
+        <span class="kpi-valor">{{ r.riegoEn | date: "EEEE d 'de' MMMM, HH:mm" }}</span>
+        @if (r.nota) {
+          <span class="kpi-pie">{{ r.nota }}</span>
+        }
+      } @else {
+        <span class="kpi-valor tenue">Sin turno programado</span>
+      }
+    </mat-card>
+    <mat-card appearance="outlined" class="kpi">
+      <span class="kpi-label"><mat-icon>mark_email_unread</mat-icon> Sin leer</span>
+      <span class="kpi-valor numero">{{ noLeidos() }}</span>
+    </mat-card>
+  </section>
+
+  @if (error()) {
+    <p class="error" role="alert"><mat-icon>cloud_off</mat-icon> {{ error() }}</p>
+  }
+
+  <div class="barra-lista">
+    <h2>Mis avisos</h2>
+    <mat-slide-toggle [checked]="soloNoLeidos()" (change)="cambiarFiltro($event.checked)">
+      Solo no leídos
+    </mat-slide-toggle>
+  </div>
+
+  <section class="lista">
+    @for (m of mensajes(); track m.id) {
+      <mat-card appearance="outlined" class="aviso" [class]="clase(m)" [class.leido]="m.leido">
+        <mat-icon class="icono">{{ iconos[m.tipo] }}</mat-icon>
+        <div class="cuerpo">
+          <div class="titulo">
+            <strong>{{ etiquetas[m.tipo] }}</strong>
+            @if (!m.leido) {
+              <span class="chip warn">Nuevo</span>
+            }
+          </div>
+          @if (m.riegoEn) {
+            <p class="riego">Riego: {{ m.riegoEn | date: "EEEE d 'de' MMMM, HH:mm" }}</p>
+          }
+          @if (m.nota) {
+            <p class="nota">{{ m.nota }}</p>
+          }
+          <p class="fecha">Recibido {{ hace(m.creadoEn) }} · {{ m.creadoEn | date: 'dd/MM/yyyy HH:mm' }}</p>
+        </div>
+        @if (!m.leido) {
+          <button mat-stroked-button (click)="marcarLeido(m)">
+            <mat-icon>done</mat-icon> Marcar leído
+          </button>
+        }
+      </mat-card>
+    } @empty {
+      @if (!cargando()) {
+        <div class="vacio">
+          <mat-icon>inbox</mat-icon>
+          <p>{{ soloNoLeidos() ? 'No tienes avisos sin leer.' : 'Todavía no tienes avisos.' }}</p>
+        </div>
+      }
+    }
+  </section>
+</main>

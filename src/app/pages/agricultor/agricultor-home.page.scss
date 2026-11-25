@@ -1,0 +1,171 @@
+.angosta {
+  max-width: 820px;
+}
+
+.encabezado {
+  margin-bottom: 20px;
+  h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 500;
+  }
+}
+
+.sub {
+  margin: 4px 0 0;
+  color: var(--viru-muted);
+  font-size: 14px;
+}
+
+mat-card {
+  background: var(--mat-sys-surface);
+}
+
+.resumen {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.kpi {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  &.destacado {
+    background: #e6f1fb;
+    border-color: #b8d6f2;
+  }
+}
+
+.kpi-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--viru-muted);
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.kpi-valor {
+  font-size: 20px;
+  font-weight: 500;
+  &::first-letter {
+    text-transform: uppercase;
+  }
+  &.numero {
+    font-size: 30px;
+  }
+  &.tenue {
+    color: var(--viru-muted);
+  }
+}
+
+.kpi-pie {
+  font-size: 13px;
+  color: var(--viru-muted);
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--viru-warn);
+  background: var(--viru-warn-bg);
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+.barra-lista {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 500;
+  }
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.aviso {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  border-left: 4px solid var(--mat-sys-primary);
+
+  &.alerta {
+    border-left-color: var(--viru-warn);
+    .icono {
+      color: var(--viru-warn);
+    }
+  }
+  &.leido {
+    opacity: 0.7;
+    border-left-color: var(--mat-sys-outline-variant);
+  }
+
+  .icono {
+    color: var(--mat-sys-primary);
+    margin-top: 2px;
+  }
+  .cuerpo {
+    flex: 1;
+    min-width: 0;
+  }
+  .titulo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  p {
+    margin: 4px 0 0;
+    font-size: 14px;
+  }
+  .riego {
+    font-weight: 500;
+    &::first-letter {
+      text-transform: uppercase;
+    }
+  }
+  .fecha {
+    font-size: 12px;
+    color: var(--viru-muted);
+  }
+}
+
+.vacio {
+  text-align: center;
+  color: var(--viru-muted);
+  padding: 40px 0;
+  mat-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 600px) {
+  .resumen {
+    grid-template-columns: 1fr;
+  }
+  .aviso {
+    flex-wrap: wrap;
+    button {
+      width: 100%;
+    }
+  }
+}

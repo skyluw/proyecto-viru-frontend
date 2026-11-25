@@ -1,0 +1,185 @@
+<app-barra-superior subtitulo="Administrador" />
+
+@if (cargando()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+<main class="page">
+  <header class="encabezado">
+    <div>
+      <h1>Panel de monitoreo</h1>
+      <p class="sub">
+        Huacapongo · Choloque · Queneto
+        @if (actualizadoEn()) {
+          · actualizado {{ actualizadoEn() | date: 'HH:mm:ss' }}
+        }
+      </p>
+    </div>
+    <button mat-flat-button (click)="abrirEnvio()">
+      <mat-icon>campaign</mat-icon> Enviar aviso
+    </button>
+  </header>
+
+  @if (error()) {
+    <p class="error" role="alert"><mat-icon>cloud_off</mat-icon> {{ error() }}</p>
+  }
+
+  <!-- Resumen: también funciona como filtro por estado de señal -->
+  <section class="resumen">
+    <mat-card appearance="outlined" class="kpi">
+      <span class="kpi-label">Dispositivos</span>
+      <span class="kpi-valor">{{ resumen().total }}</span>
+    </mat-card>
+    <mat-card
+      appearance="outlined"
+      class="kpi clic"
+      [class.activo]="filtroSenal() === 'EN_LINEA'"
+      (click)="alternarFiltroSenal('EN_LINEA')"
+    >
+      <span class="kpi-label"><span class="punto ok"></span> En línea</span>
+      <span class="kpi-valor">{{ resumen().enLinea }}</span>
+    </mat-card>
+    <mat-card
+      appearance="outlined"
+      class="kpi clic"
+      [class.activo]="filtroSenal() === 'SIN_SENAL'"
+      (click)="alternarFiltroSenal('SIN_SENAL')"
+    >
+      <span class="kpi-label"><span class="punto warn"></span> Sin señal</span>
+      <span class="kpi-valor" [class.alerta]="resumen().sinSenal > 0">{{ resumen().sinSenal }}</span>
+    </mat-card>
+    <mat-card
+      appearance="outlined"
+      class="kpi clic"
+      [class.activo]="filtroSenal() === 'SIN_DATOS'"
+      (click)="alternarFiltroSenal('SIN_DATOS')"
+    >
+      <span class="kpi-label"><span class="punto muted"></span> Sin datos</span>
+      <span class="kpi-valor">{{ resumen().sinDatos }}</span>
+    </mat-card>
+    <mat-card appearance="outlined" class="kpi">
+      <span class="kpi-label"><mat-icon class="vivo">sensors</mat-icon> En vivo</span>
+      <span class="kpi-valor">{{ lecturasSesion() }}</span>
+      <span class="kpi-pie">
+        @if (ultimaLectura(); as l) {
+          última: {{ l.codigo }} {{ l.medidoEn | date: 'HH:mm:ss' }}
+        } @else {
+          esperando lecturas…
+        }
+      </span>
+    </mat-card>
+  </section>
+
+  <section class="contenido">
+    <!-- Lista de dispositivos -->
+    <mat-card appearance="outlined" class="lista">
+      <div class="filtros">
+        <mat-button-toggle-group
+          [value]="filtroTipo()"
+          (change)="filtroTipo.set($event.value)"
+          hideSingleSelectionIndicator
+          aria-label="Filtrar por tipo"
+        >
+          <mat-button-toggle value="TODOS">Todos</mat-button-toggle>
+          <mat-button-toggle value="CAUDALIMETRO_RIO">Río</mat-button-toggle>
+          <mat-button-toggle value="CAUDALIMETRO_CANAL">Canal</mat-button-toggle>
+          <mat-button-toggle value="ESTACION_METEO">Meteo</mat-button-toggle>
+        </mat-button-toggle-group>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="buscar">
+          <mat-icon matPrefix>search</mat-icon>
+          <input
+            matInput
+            placeholder="Código o ubicación"
+            [ngModel]="busqueda()"
+            (ngModelChange)="busqueda.set($event)"
+          />
+        </mat-form-field>
+      </div>
+
+      <div class="tabla" role="table" aria-label="Dispositivos">
+        <div class="fila cabecera" role="row">
+          <span role="columnheader">Dispositivo</span>
+          <span role="columnheader">Ubicación</span>
+          <span role="columnheader">Señal</span>
+          <span role="columnheader">Última medición</span>
+          <span role="columnheader">Valor</span>
+        </div>
+        @for (d of filtrados(); track d.dispositivoId) {
+          <button
+            class="fila"
+            role="row"
+            type="button"
+            [class.seleccionada]="d.dispositivoId === seleccionadoId()"
+            [class.reciente]="ultimaLectura()?.dispositivoId === d.dispositivoId"
+            (click)="seleccionadoId.set(d.dispositivoId)"
+          >
+            <span class="codigo">
+              <mat-icon>{{ icono(d.tipo) }}</mat-icon>
+              <span>
+                <strong>{{ d.codigo }}</strong>
+                <small>{{ tipoLabel[d.tipo] }}</small>
+              </span>
+            </span>
+            <span class="ubicacion">{{ d.ubicacion ?? '—' }}</span>
+            <span><span class="chip" [class]="claseSenal(d.senal)">{{ senalLabel[d.senal] }}</span></span>
+            <span class="cuando" [matTooltip]="(d.medidoEn | date: 'dd/MM/yyyy HH:mm:ss') ?? ''">
+              {{ hace(d.medidoEn) }}
+            </span>
+            <span class="valor">
+              @if (d.variables.length) {
+                {{ formatoVariable(d.variables[0]) }}
+              } @else {
+                —
+              }
+            </span>
+          </button>
+        } @empty {
+          <p class="vacio">No hay dispositivos con estos filtros.</p>
+        }
+      </div>
+    </mat-card>
+
+    <!-- Detalle del dispositivo elegido -->
+    <mat-card appearance="outlined" class="detalle">
+      @if (seleccionado(); as d) {
+        <div class="detalle-cabecera">
+          <div>
+            <h2>{{ d.codigo }}</h2>
+            <p class="sub">{{ tipoLabel[d.tipo] }} · {{ d.modelo ?? 'sin modelo' }}</p>
+            <p class="sub">{{ d.ubicacion }}</p>
+          </div>
+          <span class="chip" [class]="claseSenal(d.senal)">{{ senalLabel[d.senal] }}</span>
+        </div>
+
+        <h3>{{ etiquetaGrafico() }}</h3>
+        @if (puntosSeleccionado().length) {
+          <app-grafico-linea [puntos]="puntosSeleccionado()" [etiqueta]="etiquetaGrafico()" />
+          <p class="nota">Valores recibidos desde que abriste el panel.</p>
+        } @else {
+          <p class="vacio">Este dispositivo todavía no tiene lecturas.</p>
+        }
+
+        @if (d.variables.length) {
+          <h3>Últimos valores</h3>
+          <ul class="variables">
+            @for (v of d.variables; track v.nombre) {
+              <li>
+                <span>{{ nombreVariable(v.nombre) }}</span>
+                <strong>{{ formatoVariable(v) }}</strong>
+              </li>
+            }
+          </ul>
+          <p class="nota">Medido {{ d.medidoEn | date: 'dd/MM/yyyy HH:mm:ss' }}</p>
+        }
+
+        @if (d.tipo !== 'ESTACION_METEO') {
+          <button mat-stroked-button class="full" (click)="abrirEnvio(d)">
+            <mat-icon>warning</mat-icon> Enviar alerta de caudal
+          </button>
+        }
+      } @else {
+        <p class="vacio">Elige un dispositivo para ver su detalle.</p>
+      }
+    </mat-card>
+  </section>
+</main>

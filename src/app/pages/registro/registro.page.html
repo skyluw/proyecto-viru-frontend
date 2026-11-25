@@ -1,0 +1,102 @@
+<main class="auth">
+  <section class="marca">
+    <mat-icon class="logo">water_drop</mat-icon>
+    <h1>Riego Virú</h1>
+    <p>
+      Los agricultores reciben las horas de riego y las alertas de caudal de su junta. Los
+      administradores supervisan los 24 dispositivos en tiempo real.
+    </p>
+  </section>
+
+  <mat-card class="tarjeta" appearance="outlined">
+    @if (cargando()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+    <mat-card-content>
+      <h2>Crear cuenta</h2>
+
+      <mat-button-toggle-group
+        class="tipo-cuenta"
+        [value]="tipo()"
+        (change)="cambiarTipo($event.value)"
+        aria-label="Tipo de cuenta"
+      >
+        <mat-button-toggle value="FARMER"><mat-icon>agriculture</mat-icon> Agricultor</mat-button-toggle>
+        <mat-button-toggle value="ADMIN"><mat-icon>admin_panel_settings</mat-icon> Administrador</mat-button-toggle>
+      </mat-button-toggle-group>
+
+      <form [formGroup]="form" (ngSubmit)="registrar()">
+        <div [class.fila]="tipo() === 'FARMER'">
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Nombre</mat-label>
+            <input matInput formControlName="nombre" autocomplete="given-name" />
+            <mat-error>Ingresa tu nombre</mat-error>
+          </mat-form-field>
+          @if (tipo() === 'FARMER') {
+            <mat-form-field appearance="outline" class="full">
+              <mat-label>Apellido</mat-label>
+              <input matInput formControlName="apellido" autocomplete="family-name" />
+              <mat-error>Ingresa tu apellido (máx. 40)</mat-error>
+            </mat-form-field>
+          }
+        </div>
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Correo</mat-label>
+          <input matInput type="email" formControlName="correo" autocomplete="email" />
+          <mat-error>Correo electrónico inválido</mat-error>
+        </mat-form-field>
+
+        @if (tipo() === 'FARMER') {
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Junta de regantes</mat-label>
+            <mat-select formControlName="juntaReganteId">
+              @for (j of juntas; track j.id) {
+                <mat-option [value]="j.id">{{ j.nombre }}</mat-option>
+              }
+            </mat-select>
+            <mat-error>Elige tu junta</mat-error>
+          </mat-form-field>
+        } @else {
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Código de administrador</mat-label>
+            <input matInput type="password" formControlName="codigoSecreto" />
+            <mat-hint>Lo valida el servidor</mat-hint>
+            <mat-error>Ingresa el código</mat-error>
+          </mat-form-field>
+        }
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Contraseña</mat-label>
+          <input matInput type="password" formControlName="password" autocomplete="new-password" />
+          <mat-hint>8+ caracteres, una mayúscula y un número</mat-hint>
+          <mat-error>Mínimo 8 caracteres, una mayúscula y un número</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Confirmar contraseña</mat-label>
+          <input matInput type="password" formControlName="confirmar" autocomplete="new-password" />
+          <mat-error>Confirma tu contraseña</mat-error>
+        </mat-form-field>
+
+        @if (form.hasError('noCoinciden') && form.controls.confirmar.touched) {
+          <p class="error" role="alert"><mat-icon>error</mat-icon> Las contraseñas no coinciden</p>
+        }
+        @if (error()) {
+          <p class="error" role="alert"><mat-icon>error</mat-icon> {{ error() }}</p>
+        }
+        @if (exito()) {
+          <p class="exito" role="status">
+            <mat-icon>check_circle</mat-icon> Cuenta creada. Te llevamos al inicio de sesión…
+          </p>
+        }
+
+        <button mat-flat-button class="full grande" type="submit" [disabled]="cargando() || exito()">
+          Crear cuenta
+        </button>
+      </form>
+
+      <p class="pie">¿Ya tienes cuenta? <a routerLink="/login">Inicia sesión</a></p>
+    </mat-card-content>
+  </mat-card>
+</main>

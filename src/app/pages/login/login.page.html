@@ -1,0 +1,69 @@
+@if (modoDemo) {
+  <div class="demo-banner">
+    Modo demo con datos simulados · usa un correo con "admin" para entrar como administrador
+  </div>
+}
+
+<main class="auth">
+  <section class="marca">
+    <mat-icon class="logo">water_drop</mat-icon>
+    <h1>Riego Virú</h1>
+    <p>
+      Monitoreo hídrico de Huacapongo, Choloque y Queneto: caudal de ríos y canales, estación
+      meteorológica y avisos de riego.
+    </p>
+  </section>
+
+  <mat-card class="tarjeta" appearance="outlined">
+    @if (cargando()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+    <mat-card-content>
+      <h2>Iniciar sesión</h2>
+
+      <form [formGroup]="form" (ngSubmit)="ingresar()">
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Correo</mat-label>
+          <input matInput type="email" formControlName="correo" autocomplete="email" />
+          <mat-icon matPrefix>mail</mat-icon>
+          @if (form.controls.correo.hasError('email')) {
+            <mat-error>Correo electrónico inválido</mat-error>
+          } @else {
+            <mat-error>Ingresa tu correo</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Contraseña</mat-label>
+          <input
+            matInput
+            [type]="verPassword() ? 'text' : 'password'"
+            formControlName="password"
+            autocomplete="current-password"
+          />
+          <mat-icon matPrefix>lock</mat-icon>
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            (click)="verPassword.set(!verPassword())"
+            [attr.aria-label]="verPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+          >
+            <mat-icon>{{ verPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          <mat-error>Ingresa tu contraseña</mat-error>
+        </mat-form-field>
+
+        @if (error()) {
+          <p class="error" role="alert"><mat-icon>error</mat-icon> {{ error() }}</p>
+        }
+
+        <button mat-flat-button class="full grande" type="submit" [disabled]="cargando()">
+          Ingresar
+        </button>
+      </form>
+
+      <p class="pie">¿No tienes cuenta? <a routerLink="/registro">Crear cuenta</a></p>
+    </mat-card-content>
+  </mat-card>
+</main>
