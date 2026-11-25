@@ -2,7 +2,6 @@ import { DatePipe } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -26,7 +25,6 @@ const REFRESCO_MS = 30_000; // el cliente consulta su bandeja cada 30 s
   imports: [
     DatePipe,
     BarraSuperior,
-    MatCardModule,
     MatButtonModule,
     MatIconModule,
     MatProgressBarModule,
@@ -104,6 +102,15 @@ export class AgricultorHomePage implements OnInit {
 
   clase(m: Notificacion): string {
     return m.tipo === 'HORA_RIEGO' ? 'riego' : 'alerta';
+  }
+
+  /** "Faltan 3 h", "Faltan 2 días"… hasta el turno. */
+  faltan(iso: string): string {
+    const min = Math.round((new Date(iso).getTime() - Date.now()) / 60_000);
+    if (min < 60) return `Faltan ${Math.max(min, 0)} min`;
+    const h = Math.round(min / 60);
+    if (h < 48) return `Faltan ${h} h`;
+    return `Faltan ${Math.round(h / 24)} días`;
   }
 
   hace(iso: string): string {

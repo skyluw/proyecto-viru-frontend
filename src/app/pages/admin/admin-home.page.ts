@@ -4,7 +4,6 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatCardModule } from '@angular/material/card';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -20,6 +19,7 @@ import { LiveStreamService } from '../../core/live-stream.service';
 import { DispositivoEstado, EstadoSenal, LecturaEnVivo, TipoDispositivo } from '../../core/models';
 import { BarraSuperior } from '../../shared/barra-superior';
 import { formatoVariable, haceCuanto, nombreVariable, variablePrincipal } from '../../shared/formato';
+import { EsquemaRed } from '../../shared/esquema-red';
 import { GraficoLinea, Punto } from '../../shared/grafico-linea';
 import { EnviarMensajeData, EnviarMensajeDialog } from './enviar-mensaje.dialog';
 
@@ -41,7 +41,7 @@ type FiltroTipo = 'TODOS' | TipoDispositivo;
     FormsModule,
     BarraSuperior,
     GraficoLinea,
-    MatCardModule,
+    EsquemaRed,
     MatButtonModule,
     MatButtonToggleModule,
     MatIconModule,
@@ -184,6 +184,15 @@ export class AdminHomePage implements OnInit {
       nuevo.set(id, [...previos, { t, v: Number(v.valor) }].slice(-MAX_PUNTOS));
       return nuevo;
     });
+  }
+
+  /** Variable más importante del sensor (caudal o temperatura). */
+  principal(d: DispositivoEstado) {
+    return variablePrincipal(d.tipo, d.variables);
+  }
+
+  numero(valor: number): string {
+    return Number(valor).toLocaleString('es-PE', { maximumFractionDigits: 3 });
   }
 
   claseSenal(s: EstadoSenal): string {

@@ -1,4 +1,4 @@
-<app-barra-superior subtitulo="Agricultor" />
+<app-barra-superior subtitulo="Mis avisos" />
 
 @if (cargando()) {
   <mat-progress-bar mode="indeterminate" />
@@ -8,72 +8,77 @@
   <header class="encabezado">
     <h1>Hola, {{ auth.usuario()?.nombre }}</h1>
     <p class="sub">
-      Avisos de riego y alertas de caudal de tu junta
-      @if (actualizadoEn()) {
-        · actualizado {{ actualizadoEn() | date: 'HH:mm' }}
+      @if (noLeidos() > 0) {
+        Tienes {{ noLeidos() }} {{ noLeidos() === 1 ? 'aviso nuevo' : 'avisos nuevos' }}.
+      } @else {
+        Estás al día con tus avisos.
       }
     </p>
   </header>
 
-  <section class="resumen">
-    <mat-card appearance="outlined" class="kpi destacado">
-      <span class="kpi-label"><mat-icon>schedule</mat-icon> Próximo riego</span>
-      @if (proximoRiego(); as r) {
-        <span class="kpi-valor">{{ r.riegoEn | date: "EEEE d 'de' MMMM, HH:mm" }}</span>
+  <!-- Turno: lo más importante para el agricultor -->
+  @if (proximoRiego(); as r) {
+    <section class="turno" aria-label="Próximo turno de riego">
+      <div class="turno-texto">
+        <span class="turno-etiqueta"><mat-icon>water_drop</mat-icon> Tu próximo turno de riego</span>
+        <span class="turno-dia">{{ r.riegoEn | date: "EEEE d 'de' MMMM" }}</span>
         @if (r.nota) {
-          <span class="kpi-pie">{{ r.nota }}</span>
+          <p class="turno-nota">{{ r.nota }}</p>
         }
-      } @else {
-        <span class="kpi-valor tenue">Sin turno programado</span>
-      }
-    </mat-card>
-    <mat-card appearance="outlined" class="kpi">
-      <span class="kpi-label"><mat-icon>mark_email_unread</mat-icon> Sin leer</span>
-      <span class="kpi-valor numero">{{ noLeidos() }}</span>
-    </mat-card>
-  </section>
+      </div>
+      <div class="turno-hora">
+        <span class="hora num">{{ r.riegoEn | date: 'HH:mm' }}</span>
+        <span class="falta">{{ faltan(r.riegoEn!) }}</span>
+      </div>
+    </section>
+  } @else if (!cargando()) {
+    <section class="turno vacio-turno">
+      <mat-icon>event_available</mat-icon>
+      <p>No tienes turnos de riego programados. Cuando el administrador asigne uno, aparecerá aquí.</p>
+    </section>
+  }
 
   @if (error()) {
     <p class="error" role="alert"><mat-icon>cloud_off</mat-icon> {{ error() }}</p>
   }
 
   <div class="barra-lista">
-    <h2>Mis avisos</h2>
+    <h2>Avisos</h2>
     <mat-slide-toggle [checked]="soloNoLeidos()" (change)="cambiarFiltro($event.checked)">
-      Solo no leídos
+      Solo los nuevos
     </mat-slide-toggle>
   </div>
 
   <section class="lista">
     @for (m of mensajes(); track m.id) {
-      <mat-card appearance="outlined" class="aviso" [class]="clase(m)" [class.leido]="m.leido">
-        <mat-icon class="icono">{{ iconos[m.tipo] }}</mat-icon>
+      <article class="aviso" [class]="clase(m)" [class.leido]="m.leido">
+        <div class="icono"><mat-icon>{{ iconos[m.tipo] }}</mat-icon></div>
         <div class="cuerpo">
           <div class="titulo">
-            <strong>{{ etiquetas[m.tipo] }}</strong>
+            <h3>{{ etiquetas[m.tipo] }}</h3>
             @if (!m.leido) {
-              <span class="chip warn">Nuevo</span>
+              <span class="chip ok sin-punto nuevo">Nuevo</span>
             }
           </div>
           @if (m.riegoEn) {
-            <p class="riego">Riego: {{ m.riegoEn | date: "EEEE d 'de' MMMM, HH:mm" }}</p>
+            <p class="riego">Riego el {{ m.riegoEn | date: "EEEE d 'de' MMMM, 'a las' HH:mm" }}</p>
           }
           @if (m.nota) {
             <p class="nota">{{ m.nota }}</p>
           }
-          <p class="fecha">Recibido {{ hace(m.creadoEn) }} · {{ m.creadoEn | date: 'dd/MM/yyyy HH:mm' }}</p>
+          <p class="fecha">Recibido {{ hace(m.creadoEn) }}</p>
         </div>
         @if (!m.leido) {
-          <button mat-stroked-button (click)="marcarLeido(m)">
-            <mat-icon>done</mat-icon> Marcar leído
+          <button mat-stroked-button class="marcar" (click)="marcarLeido(m)">
+            <mat-icon>done</mat-icon> Marcar como leído
           </button>
         }
-      </mat-card>
+      </article>
     } @empty {
       @if (!cargando()) {
         <div class="vacio">
           <mat-icon>inbox</mat-icon>
-          <p>{{ soloNoLeidos() ? 'No tienes avisos sin leer.' : 'Todavía no tienes avisos.' }}</p>
+          <p>{{ soloNoLeidos() ? 'No tienes avisos nuevos.' : 'Todavía no has recibido avisos.' }}</p>
         </div>
       }
     }

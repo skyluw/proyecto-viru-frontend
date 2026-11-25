@@ -8,7 +8,6 @@ import {
 } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -16,6 +15,8 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
+import { LogoViru } from '../../shared/logo-viru';
+import { PaisajeCanales } from '../../shared/paisaje-canales';
 import { mensajeDeError } from '../../core/auth.interceptor';
 import { AuthService } from '../../core/auth.service';
 import { JUNTAS, PASSWORD_PATTERN } from '../../core/catalogos';
@@ -35,7 +36,8 @@ function passwordsIguales(grupo: AbstractControl): ValidationErrors | null {
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    MatCardModule,
+    LogoViru,
+    PaisajeCanales,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,

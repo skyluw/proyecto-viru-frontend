@@ -1,50 +1,63 @@
 .angosta {
-  max-width: 820px;
+  max-width: 780px;
 }
 
 .encabezado {
-  margin-bottom: 20px;
+  margin-bottom: 22px;
   h1 {
     margin: 0;
-    font-size: 26px;
-    font-weight: 500;
+    font-size: 30px;
   }
 }
 
 .sub {
-  margin: 4px 0 0;
-  color: var(--viru-muted);
-  font-size: 14px;
+  margin: 6px 0 0;
+  color: var(--viru-texto-2);
+  font-size: 16px;
 }
 
-mat-card {
-  background: var(--mat-sys-surface);
-}
-
-.resumen {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.kpi {
-  padding: 16px;
+// ---- Turno de riego ----
+.turno {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  &.destacado {
-    background: #e6f1fb;
-    border-color: #b8d6f2;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 20px;
+  padding: 24px 26px;
+  margin-bottom: 30px;
+  border-radius: 18px;
+  background: var(--viru-agua);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+
+  // un canal que cruza la tarjeta
+  &::after {
+    content: '';
+    position: absolute;
+    left: -10%;
+    right: -10%;
+    bottom: -66px;
+    height: 80px;
+    border-top: 7px solid rgba(79, 179, 194, 0.3);
+    border-radius: 50%;
+    pointer-events: none;
   }
 }
 
-.kpi-label {
+.turno-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  z-index: 1;
+}
+
+.turno-etiqueta {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
-  color: var(--viru-muted);
+  font-size: 14px;
+  color: #9fd7df;
   mat-icon {
     font-size: 18px;
     width: 18px;
@@ -52,35 +65,71 @@ mat-card {
   }
 }
 
-.kpi-valor {
-  font-size: 20px;
-  font-weight: 500;
+.turno-dia {
+  font-size: 26px;
+  font-weight: 650;
+  font-stretch: 112%;
+  line-height: 1.15;
   &::first-letter {
     text-transform: uppercase;
   }
-  &.numero {
-    font-size: 30px;
+}
+
+.turno-nota {
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 15px;
+}
+
+.turno-hora {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 1;
+  .hora {
+    font-size: 56px;
+    font-weight: 700;
+    font-stretch: 110%;
+    line-height: 1;
+    letter-spacing: -0.02em;
   }
-  &.tenue {
-    color: var(--viru-muted);
+  .falta {
+    margin-top: 6px;
+    font-size: 14px;
+    color: #9fd7df;
   }
 }
 
-.kpi-pie {
-  font-size: 13px;
-  color: var(--viru-muted);
+.vacio-turno {
+  background: #fff;
+  color: var(--viru-texto-2);
+  border: 1px dashed var(--viru-linea);
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  &::after {
+    display: none;
+  }
+  mat-icon {
+    color: var(--viru-canal);
+  }
+  p {
+    margin: 0;
+  }
 }
 
 .error {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--viru-warn);
-  background: var(--viru-warn-bg);
+  color: var(--viru-alerta);
+  background: var(--viru-alerta-bg);
   padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: var(--radio-control);
 }
 
+// ---- Lista de avisos ----
 .barra-lista {
   display: flex;
   justify-content: space-between;
@@ -88,40 +137,55 @@ mat-card {
   margin-bottom: 12px;
   h2 {
     margin: 0;
-    font-size: 18px;
-    font-weight: 500;
+    font-size: 20px;
   }
 }
 
 .lista {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  background: #fff;
+  border: 1px solid var(--viru-linea);
+  border-radius: var(--radio-panel);
+  overflow: hidden;
 }
 
 .aviso {
   display: flex;
-  flex-direction: row;
   align-items: flex-start;
-  gap: 14px;
-  padding: 16px;
-  border-left: 4px solid var(--mat-sys-primary);
-
-  &.alerta {
-    border-left-color: var(--viru-warn);
-    .icono {
-      color: var(--viru-warn);
-    }
-  }
-  &.leido {
-    opacity: 0.7;
-    border-left-color: var(--mat-sys-outline-variant);
+  gap: 16px;
+  padding: 18px 20px;
+  border-top: 1px solid var(--viru-linea);
+  &:first-child {
+    border-top: 0;
   }
 
   .icono {
-    color: var(--mat-sys-primary);
-    margin-top: 2px;
+    flex: none;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: #e3f1f3;
+    color: var(--viru-canal);
   }
+  &.alerta .icono {
+    background: var(--viru-alerta-bg);
+    color: var(--viru-alerta);
+  }
+  &.leido {
+    .icono {
+      background: var(--viru-gris-bg);
+      color: var(--viru-gris);
+    }
+    h3,
+    .riego {
+      color: var(--viru-texto-2);
+      font-weight: 500;
+    }
+  }
+
   .cuerpo {
     flex: 1;
     min-width: 0;
@@ -131,40 +195,69 @@ mat-card {
     align-items: center;
     gap: 8px;
   }
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 650;
+  }
   p {
     margin: 4px 0 0;
-    font-size: 14px;
+    font-size: 15px;
   }
   .riego {
-    font-weight: 500;
+    font-weight: 600;
     &::first-letter {
       text-transform: uppercase;
     }
   }
+  .nota {
+    color: var(--viru-agua);
+  }
   .fecha {
+    font-size: 13px;
+    color: var(--viru-texto-2);
+  }
+  .nuevo {
     font-size: 12px;
-    color: var(--viru-muted);
+  }
+  .marcar {
+    flex: none;
   }
 }
 
 .vacio {
   text-align: center;
-  color: var(--viru-muted);
+  color: var(--viru-texto-2);
   padding: 40px 0;
   mat-icon {
     font-size: 40px;
     width: 40px;
     height: 40px;
+    color: var(--viru-gris);
   }
 }
 
 @media (max-width: 600px) {
-  .resumen {
-    grid-template-columns: 1fr;
+  .encabezado h1 {
+    font-size: 26px;
+  }
+  .turno {
+    flex-direction: column;
+    gap: 14px;
+    padding: 22px;
+  }
+  .turno-hora {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 12px;
+    .hora {
+      font-size: 44px;
+    }
   }
   .aviso {
     flex-wrap: wrap;
-    button {
+    .marcar {
       width: 100%;
     }
   }

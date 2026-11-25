@@ -1,25 +1,26 @@
 @if (modoDemo) {
   <div class="demo-banner">
-    Modo demo con datos simulados · usa un correo con "admin" para entrar como administrador
+    Modo demo con datos simulados. Usa un correo que contenga "admin" para entrar como administrador.
   </div>
 }
 
 <main class="auth">
   <section class="marca">
-    <mat-icon class="logo">water_drop</mat-icon>
-    <h1>Riego Virú</h1>
-    <p>
-      Monitoreo hídrico de Huacapongo, Choloque y Queneto: caudal de ríos y canales, estación
-      meteorológica y avisos de riego.
-    </p>
+    <span class="logo"><app-logo-viru [tamano]="34" /> Riego Virú</span>
+    <div class="mensaje">
+      <h1>El riego de Huacapongo, Choloque y Queneto en un solo lugar</h1>
+      <p>Consulta el caudal de ríos y canales, y recibe tus turnos de riego y alertas en cuanto se publican.</p>
+    </div>
+    <app-paisaje-canales />
   </section>
 
-  <mat-card class="tarjeta" appearance="outlined">
-    @if (cargando()) {
-      <mat-progress-bar mode="indeterminate" />
-    }
-    <mat-card-content>
-      <h2>Iniciar sesión</h2>
+  <section class="lado-form">
+    <div class="formulario">
+      @if (cargando()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      <h2>Inicia sesión</h2>
+      <p class="ayuda">Usa el correo con el que te registraste.</p>
 
       <form [formGroup]="form" (ngSubmit)="ingresar()">
         <mat-form-field appearance="outline" class="full">
@@ -27,9 +28,9 @@
           <input matInput type="email" formControlName="correo" autocomplete="email" />
           <mat-icon matPrefix>mail</mat-icon>
           @if (form.controls.correo.hasError('email')) {
-            <mat-error>Correo electrónico inválido</mat-error>
+            <mat-error>Escribe un correo válido, por ejemplo nombre&#64;correo.com</mat-error>
           } @else {
-            <mat-error>Ingresa tu correo</mat-error>
+            <mat-error>Escribe tu correo</mat-error>
           }
         </mat-form-field>
 
@@ -51,7 +52,7 @@
           >
             <mat-icon>{{ verPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
           </button>
-          <mat-error>Ingresa tu contraseña</mat-error>
+          <mat-error>Escribe tu contraseña</mat-error>
         </mat-form-field>
 
         @if (error()) {
@@ -59,11 +60,11 @@
         }
 
         <button mat-flat-button class="full grande" type="submit" [disabled]="cargando()">
-          Ingresar
+          Iniciar sesión
         </button>
       </form>
 
-      <p class="pie">¿No tienes cuenta? <a routerLink="/registro">Crear cuenta</a></p>
-    </mat-card-content>
-  </mat-card>
+      <p class="pie">¿Primera vez aquí? <a routerLink="/registro">Crea tu cuenta</a></p>
+    </div>
+  </section>
 </main>

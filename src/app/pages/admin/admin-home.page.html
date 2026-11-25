@@ -1,4 +1,4 @@
-<app-barra-superior subtitulo="Administrador" />
+<app-barra-superior subtitulo="Panel de monitoreo" />
 
 @if (cargando()) {
   <mat-progress-bar mode="indeterminate" />
@@ -7,15 +7,15 @@
 <main class="page">
   <header class="encabezado">
     <div>
-      <h1>Panel de monitoreo</h1>
+      <h1>Ríos y canales</h1>
       <p class="sub">
-        Huacapongo · Choloque · Queneto
+        Huacapongo, Choloque y Queneto
         @if (actualizadoEn()) {
-          · actualizado {{ actualizadoEn() | date: 'HH:mm:ss' }}
+          <span class="actualizado">Actualizado a las {{ actualizadoEn() | date: 'HH:mm:ss' }}</span>
         }
       </p>
     </div>
-    <button mat-flat-button (click)="abrirEnvio()">
+    <button mat-flat-button class="accion" (click)="abrirEnvio()">
       <mat-icon>campaign</mat-icon> Enviar aviso
     </button>
   </header>
@@ -24,55 +24,55 @@
     <p class="error" role="alert"><mat-icon>cloud_off</mat-icon> {{ error() }}</p>
   }
 
-  <!-- Resumen: también funciona como filtro por estado de señal -->
-  <section class="resumen">
-    <mat-card appearance="outlined" class="kpi">
-      <span class="kpi-label">Dispositivos</span>
-      <span class="kpi-valor">{{ resumen().total }}</span>
-    </mat-card>
-    <mat-card
-      appearance="outlined"
-      class="kpi clic"
-      [class.activo]="filtroSenal() === 'EN_LINEA'"
-      (click)="alternarFiltroSenal('EN_LINEA')"
-    >
-      <span class="kpi-label"><span class="punto ok"></span> En línea</span>
-      <span class="kpi-valor">{{ resumen().enLinea }}</span>
-    </mat-card>
-    <mat-card
-      appearance="outlined"
-      class="kpi clic"
-      [class.activo]="filtroSenal() === 'SIN_SENAL'"
-      (click)="alternarFiltroSenal('SIN_SENAL')"
-    >
-      <span class="kpi-label"><span class="punto warn"></span> Sin señal</span>
-      <span class="kpi-valor" [class.alerta]="resumen().sinSenal > 0">{{ resumen().sinSenal }}</span>
-    </mat-card>
-    <mat-card
-      appearance="outlined"
-      class="kpi clic"
-      [class.activo]="filtroSenal() === 'SIN_DATOS'"
-      (click)="alternarFiltroSenal('SIN_DATOS')"
-    >
-      <span class="kpi-label"><span class="punto muted"></span> Sin datos</span>
-      <span class="kpi-valor">{{ resumen().sinDatos }}</span>
-    </mat-card>
-    <mat-card appearance="outlined" class="kpi">
-      <span class="kpi-label"><mat-icon class="vivo">sensors</mat-icon> En vivo</span>
-      <span class="kpi-valor">{{ lecturasSesion() }}</span>
-      <span class="kpi-pie">
+  <!-- Estado general + esquema hidráulico -->
+  <section class="panel red" aria-labelledby="titulo-red">
+    <div class="red-cabecera">
+      <div class="estado-red">
+        <h2 id="titulo-red">{{ resumen().enLinea }} de {{ resumen().total }} sensores reportando</h2>
+        <div class="barra" aria-hidden="true">
+          <span class="seg ok" [style.flex-grow]="resumen().enLinea"></span>
+          <span class="seg warn" [style.flex-grow]="resumen().sinSenal"></span>
+          <span class="seg muted" [style.flex-grow]="resumen().sinDatos"></span>
+        </div>
+        <div class="leyenda" role="group" aria-label="Filtrar por estado">
+          <button type="button" [class.activo]="filtroSenal() === 'EN_LINEA'" (click)="alternarFiltroSenal('EN_LINEA')">
+            <span class="chip ok sin-fondo">{{ resumen().enLinea }} en línea</span>
+          </button>
+          <button type="button" [class.activo]="filtroSenal() === 'SIN_SENAL'" (click)="alternarFiltroSenal('SIN_SENAL')">
+            <span class="chip warn sin-fondo">{{ resumen().sinSenal }} sin señal</span>
+          </button>
+          <button type="button" [class.activo]="filtroSenal() === 'SIN_DATOS'" (click)="alternarFiltroSenal('SIN_DATOS')">
+            <span class="chip muted sin-fondo">{{ resumen().sinDatos }} sin datos</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="vivo" aria-live="polite">
+        <span class="luz" [class.encendida]="lecturasSesion() > 0"></span>
         @if (ultimaLectura(); as l) {
-          última: {{ l.codigo }} {{ l.medidoEn | date: 'HH:mm:ss' }}
+          <span>
+            <strong class="num">{{ lecturasSesion() }}</strong>
+            {{ lecturasSesion() === 1 ? 'lectura recibida' : 'lecturas recibidas' }} en vivo<br />
+            <span class="tenue">Última: {{ l.codigo }} a las {{ l.medidoEn | date: 'HH:mm:ss' }}</span>
+          </span>
         } @else {
-          esperando lecturas…
+          <span class="tenue">Esperando lecturas en vivo</span>
         }
-      </span>
-    </mat-card>
+      </div>
+    </div>
+
+    <app-esquema-red
+      [dispositivos]="dispositivos()"
+      [seleccionadoId]="seleccionadoId()"
+      [ultimaLectura]="ultimaLectura()"
+      (seleccionar)="seleccionadoId.set($event)"
+    />
+    <p class="nota-esquema">Esquema sin escala. Toca un sensor para ver su detalle.</p>
   </section>
 
   <section class="contenido">
     <!-- Lista de dispositivos -->
-    <mat-card appearance="outlined" class="lista">
+    <div class="panel lista">
       <div class="filtros">
         <mat-button-toggle-group
           [value]="filtroTipo()"
@@ -82,27 +82,28 @@
         >
           <mat-button-toggle value="TODOS">Todos</mat-button-toggle>
           <mat-button-toggle value="CAUDALIMETRO_RIO">Río</mat-button-toggle>
-          <mat-button-toggle value="CAUDALIMETRO_CANAL">Canal</mat-button-toggle>
-          <mat-button-toggle value="ESTACION_METEO">Meteo</mat-button-toggle>
+          <mat-button-toggle value="CAUDALIMETRO_CANAL">Canales</mat-button-toggle>
+          <mat-button-toggle value="ESTACION_METEO">Clima</mat-button-toggle>
         </mat-button-toggle-group>
         <mat-form-field appearance="outline" subscriptSizing="dynamic" class="buscar">
           <mat-icon matPrefix>search</mat-icon>
           <input
             matInput
-            placeholder="Código o ubicación"
+            placeholder="Buscar código o lugar"
+            aria-label="Buscar código o lugar"
             [ngModel]="busqueda()"
             (ngModelChange)="busqueda.set($event)"
           />
         </mat-form-field>
       </div>
 
-      <div class="tabla" role="table" aria-label="Dispositivos">
+      <div class="tabla" role="table" aria-label="Sensores">
         <div class="fila cabecera" role="row">
-          <span role="columnheader">Dispositivo</span>
-          <span role="columnheader">Ubicación</span>
+          <span role="columnheader">Sensor</span>
+          <span role="columnheader">Lugar</span>
           <span role="columnheader">Señal</span>
-          <span role="columnheader">Última medición</span>
-          <span role="columnheader">Valor</span>
+          <span role="columnheader">Último reporte</span>
+          <span role="columnheader" class="der">Lectura</span>
         </div>
         @for (d of filtrados(); track d.dispositivoId) {
           <button
@@ -125,7 +126,7 @@
             <span class="cuando" [matTooltip]="(d.medidoEn | date: 'dd/MM/yyyy HH:mm:ss') ?? ''">
               {{ hace(d.medidoEn) }}
             </span>
-            <span class="valor">
+            <span class="valor num">
               @if (d.variables.length) {
                 {{ formatoVariable(d.variables[0]) }}
               } @else {
@@ -134,52 +135,60 @@
             </span>
           </button>
         } @empty {
-          <p class="vacio">No hay dispositivos con estos filtros.</p>
+          <p class="vacio">Ningún sensor coincide con este filtro.</p>
         }
       </div>
-    </mat-card>
+    </div>
 
-    <!-- Detalle del dispositivo elegido -->
-    <mat-card appearance="outlined" class="detalle">
+    <!-- Detalle del sensor elegido -->
+    <aside class="panel detalle" aria-live="polite">
       @if (seleccionado(); as d) {
         <div class="detalle-cabecera">
-          <div>
+          <div class="icono-tipo"><mat-icon>{{ icono(d.tipo) }}</mat-icon></div>
+          <div class="detalle-titulo">
             <h2>{{ d.codigo }}</h2>
-            <p class="sub">{{ tipoLabel[d.tipo] }} · {{ d.modelo ?? 'sin modelo' }}</p>
             <p class="sub">{{ d.ubicacion }}</p>
           </div>
           <span class="chip" [class]="claseSenal(d.senal)">{{ senalLabel[d.senal] }}</span>
         </div>
 
-        <h3>{{ etiquetaGrafico() }}</h3>
-        @if (puntosSeleccionado().length) {
+        @if (principal(d); as v) {
+          <div class="lectura-principal">
+            <span class="etiqueta">{{ nombreVariable(v.nombre) }}</span>
+            <span class="valor-grande num">{{ numero(v.valor) }}</span>
+            <span class="unidad">{{ v.unidad }}</span>
+          </div>
+        }
+
+        @if (puntosSeleccionado().length > 1) {
           <app-grafico-linea [puntos]="puntosSeleccionado()" [etiqueta]="etiquetaGrafico()" />
-          <p class="nota">Valores recibidos desde que abriste el panel.</p>
+          <p class="nota">Lecturas recibidas desde que abriste el panel.</p>
+        } @else if (d.medidoEn) {
+          <p class="nota esperando">El gráfico aparece cuando llegue la siguiente lectura.</p>
         } @else {
-          <p class="vacio">Este dispositivo todavía no tiene lecturas.</p>
+          <p class="nota esperando">Este sensor todavía no ha enviado lecturas.</p>
         }
 
         @if (d.variables.length) {
-          <h3>Últimos valores</h3>
           <ul class="variables">
             @for (v of d.variables; track v.nombre) {
               <li>
                 <span>{{ nombreVariable(v.nombre) }}</span>
-                <strong>{{ formatoVariable(v) }}</strong>
+                <strong class="num">{{ formatoVariable(v) }}</strong>
               </li>
             }
           </ul>
-          <p class="nota">Medido {{ d.medidoEn | date: 'dd/MM/yyyy HH:mm:ss' }}</p>
+          <p class="nota">Medido el {{ d.medidoEn | date: "d 'de' MMMM, HH:mm:ss" }}. {{ d.modelo }}</p>
         }
 
         @if (d.tipo !== 'ESTACION_METEO') {
-          <button mat-stroked-button class="full" (click)="abrirEnvio(d)">
-            <mat-icon>warning</mat-icon> Enviar alerta de caudal
+          <button mat-stroked-button class="full alerta" (click)="abrirEnvio(d)">
+            <mat-icon>warning</mat-icon> Avisar a los agricultores
           </button>
         }
       } @else {
-        <p class="vacio">Elige un dispositivo para ver su detalle.</p>
+        <p class="vacio">Elige un sensor en el esquema o en la lista.</p>
       }
-    </mat-card>
+    </aside>
   </section>
 </main>

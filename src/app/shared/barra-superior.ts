@@ -5,17 +5,19 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { environment } from '../../environments/environment';
 import { AuthService } from '../core/auth.service';
+import { LogoViru } from './logo-viru';
 
-/** Barra superior de los Home: nombre del sistema, usuario y botón para salir. */
+/** Barra superior de los Home: marca, sección, usuario y botón para salir. */
 @Component({
   selector: 'app-barra-superior',
-  imports: [MatToolbarModule, MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [MatToolbarModule, MatButtonModule, MatIconModule, MatTooltipModule, LogoViru],
   template: `
     @if (modoDemo) {
-      <div class="demo-banner">Modo demo · datos simulados, sin conexión al backend</div>
+      <div class="demo-banner">Modo demo: datos simulados, sin conexión al servidor</div>
     }
     <mat-toolbar class="toolbar">
-      <span class="titulo"><mat-icon>water_drop</mat-icon> Riego Virú · {{ subtitulo() }}</span>
+      <span class="marca"><app-logo-viru [tamano]="26" /> Riego Virú</span>
+      <span class="seccion">{{ subtitulo() }}</span>
       <span class="espacio"></span>
       <span class="usuario">{{ auth.usuario()?.nombre }}</span>
       <button mat-icon-button (click)="auth.logout()" matTooltip="Cerrar sesión" aria-label="Cerrar sesión">
@@ -25,8 +27,7 @@ import { AuthService } from '../core/auth.service';
   `,
   styles: `
     @media (max-width: 600px) {
-      .usuario { display: none; }
-      .titulo { font-size: 16px; }
+      .usuario, .seccion { display: none; }
     }
   `,
 })
