@@ -8,10 +8,10 @@ const JUNTAS_DEMO = ['Huacapongo', 'Choloque', 'Queneto'].map((nombre, i) => ({
   id: i + 1, nombre, regionId: 1,
 }));
 const CANALES_DEMO = DISPOSITIVOS_DEMO.filter((d) => d.tipo === 'CAUDALIMETRO_CANAL').map((d) => ({
-  id: d.id, codigo: d.codigo, nombre: d.codigo,
+  id: d.id, codigo: d.codigo, nombre: d.nombreCanal ?? d.codigo,
 }));
 const PREDIOS_DEMO: Predio[] = [
-  { id: 1, codigo: 'DEMO-01', nombre: 'Predio de muestra', agricultorId: 2, canales: [CANALES_DEMO[0]] },
+  { id: 1, codigo: 'DEMO-01', nombre: 'Predio de muestra', agricultorId: 2, canales: [CANALES_DEMO[5]] },
 ];
 
 /**
@@ -81,7 +81,16 @@ export const mockBackendInterceptor: HttpInterceptorFn = (req, next) => {
   }
   if (url.endsWith('/api/farmer/predios')) {
     const ids = PREDIOS_DEMO.flatMap((p) => p.canales.map((c) => c.id));
-    return ok({ predios: PREDIOS_DEMO, canales: estadoDemo().filter((d) => ids.includes(d.dispositivoId)) });
+    const lista = estadoDemo();
+    const vecinos = new Set(['CAN-05', 'CAN-09', 'CAN-19']);
+    return ok({
+      predios: PREDIOS_DEMO,
+      canales: lista.filter((d) => ids.includes(d.dispositivoId)),
+      comision: 'Huacapongo',
+      canalesComision: lista
+        .filter((d) => ids.includes(d.dispositivoId) || vecinos.has(d.codigo))
+        .map((d) => ({ ...d, propio: ids.includes(d.dispositivoId) })),
+    });
   }
 
   if (url.endsWith('/api/admin/mensajes') && req.method === 'POST') {

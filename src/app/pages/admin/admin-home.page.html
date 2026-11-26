@@ -68,9 +68,9 @@
 
     <app-esquema-red
       [dispositivos]="dispositivos()"
-      [seleccionadoId]="seleccionadoId()"
-      [ultimaLectura]="ultimaLectura()"
-      (seleccionar)="seleccionadoId.set($event)"
+      [administrador]="true"
+      [(seleccionadoId)]="seleccionadoId"
+      (verHistorial)="detalleSensor.scrollIntoView({ block: 'start' })"
     />
   </section>
 
@@ -145,7 +145,7 @@
     </div>
 
     <!-- Detalle del sensor elegido -->
-    <aside id="detalle-sensor" class="panel detalle" aria-live="polite">
+    <aside #detalleSensor id="detalle-sensor" class="panel detalle" aria-live="polite">
       @if (seleccionado(); as d) {
         <div class="detalle-cabecera">
           <div class="icono-tipo"><mat-icon>{{ icono(d.tipo) }}</mat-icon></div>
@@ -160,13 +160,23 @@
         @if (d.simulada) {
           <p class="nota">Última lectura simulada</p>
         }
-        @if (d.caudal; as caudal) {
-          @if (caudal.litrosPorSegundo !== null && caudal.umbralAlto !== null) {
-            <p class="estado-caudal" [class.alto]="caudal.alto">
-              {{ caudal.alto ? 'Caudal alto' : 'Caudal dentro del umbral' }}
-              · Umbral {{ numero(caudal.umbralAlto) }} L/s
+        @if (d.tipo === 'CAUDALIMETRO_CANAL' && d.caudal; as caudal) {
+          @if (caudal.litrosPorSegundo !== null) {
+            @let estado = estadoEnMapa(d, ahora());
+            <p class="estado-caudal" [class.alto]="estado === 'alto'">
+              @switch (estado) {
+                @case ('alto') { Caudal alto }
+                @case ('bajo') { Caudal bajo }
+                @case ('vencida') { Última lectura vencida }
+                @default { Lectura vigente }
+              }
+              @if (caudal.umbralAlto !== null) {
+                · Umbrales
+                @if (caudal.umbralBajo != null) { {{ numero(caudal.umbralBajo) }} bajo / }
+                {{ numero(caudal.umbralAlto) }} alto (L/s)
+              }
             </p>
-          } @else if (d.tipo !== 'ESTACION_METEO' && caudal.litrosPorSegundo === null) {
+          } @else {
             <p class="nota">Caudal sin reporte</p>
           }
         }

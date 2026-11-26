@@ -1,6 +1,27 @@
 .angosta {
-  max-width: 780px;
+  max-width: 1120px;
 }
+
+.mapa-predios {
+  margin: 0 0 24px;
+  padding: clamp(12px, 2vw, 20px);
+  background: #fff;
+  border: 1px solid var(--viru-linea);
+  border-radius: var(--radio-panel);
+}
+
+.ir-avisos {
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: var(--viru-canal);
+  font-weight: 680;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+#avisos { scroll-margin-top: 76px; }
 
 .predios {
   margin-top: 30px;
@@ -243,8 +264,9 @@
   }
   .titulo {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: 4px 8px;
   }
   h3 {
     margin: 0;

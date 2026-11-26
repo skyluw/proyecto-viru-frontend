@@ -16,9 +16,15 @@ interface DispositivoDemo {
   modelo: string;
   ubicacion: string;
   senal: EstadoSenal;
+  nombreCanal?: string;
 }
 
 const RIOS = ['Santa Mercedes', 'Caray', 'Napo'];
+const CANALES = [
+  'Alayo', 'Alfaro', 'San Juan', 'Caray', 'Choloque', 'Ciruelo', 'Hierba Luisa',
+  'Higuerón', 'Huacapongo', 'Marciano', 'Napo', 'Peña Azul', 'Queneto', 'San Nicolás',
+  'Santa Mercedes', 'Sarachaga', 'Susanga', 'Villegas', 'Vinzos', 'Viruly',
+];
 
 function crearDispositivos(): DispositivoDemo[] {
   const lista: DispositivoDemo[] = [];
@@ -32,14 +38,14 @@ function crearDispositivos(): DispositivoDemo[] {
       senal: 'EN_LINEA',
     }),
   );
-  const comisiones = ['Huacapongo', 'Choloque', 'Queneto'];
   for (let c = 1; c <= 20; c++) {
     lista.push({
       id: 3 + c,
       codigo: `CAN-${String(c).padStart(2, '0')}`,
       tipo: 'CAUDALIMETRO_CANAL',
       modelo: 'Milesight EM410-RDL',
-      ubicacion: `Canal ${c} · ${comisiones[c % 3]}`,
+      ubicacion: `Cabecera ${CANALES[c - 1]}`,
+      nombreCanal: CANALES[c - 1],
       senal: c === 7 ? 'SIN_SENAL' : c === 18 ? 'SIN_DATOS' : 'EN_LINEA',
     });
   }
@@ -59,8 +65,8 @@ export const DISPOSITIVOS_DEMO = crearDispositivos();
 const azar = (min: number, max: number, dec = 2) =>
   Math.round((min + Math.random() * (max - min)) * 10 ** dec) / 10 ** dec;
 
-function variablesPara(tipo: TipoDispositivo): Variable[] {
-  if (tipo === 'ESTACION_METEO') {
+function variablesPara(d: DispositivoDemo): Variable[] {
+  if (d.tipo === 'ESTACION_METEO') {
     return [
       { nombre: 'temperatura', valor: azar(17, 27, 1), unidad: '°C' },
       { nombre: 'humedad', valor: azar(55, 85, 0), unidad: '%' },
@@ -68,22 +74,31 @@ function variablesPara(tipo: TipoDispositivo): Variable[] {
       { nombre: 'viento', valor: azar(0.5, 6, 1), unidad: 'm/s' },
     ];
   }
-  const caudal = tipo === 'CAUDALIMETRO_RIO' ? azar(0.8, 3.5, 3) : azar(0.05, 0.6, 3);
+  let caudal = azar(45, 92, 1);
+  if (d.tipo === 'CAUDALIMETRO_RIO') caudal = azar(275, 510, 1);
+  if (d.codigo === 'CAN-06') caudal = azar(22, 30, 1);
+  if (d.codigo === 'CAN-05' || d.codigo === 'CAN-12') caudal = azar(125, 145, 1);
   return [
-    { nombre: 'caudal', valor: caudal, unidad: 'm3/s' },
+    { nombre: 'caudal', valor: caudal, unidad: 'L/s' },
     { nombre: 'bateria', valor: azar(70, 99, 0), unidad: '%' },
   ];
 }
 
-function caudalDemo(variables: Variable[]): EstadoCaudal {
-  const caudal = variables.find((v) => v.nombre === 'caudal');
-  return { litrosPorSegundo: caudal ? caudal.valor * 1000 : null, umbralAlto: null, alto: null };
+function caudalDemo(variables: Variable[], esCanal: boolean): EstadoCaudal {
+  const litros = variables.find((v) => v.nombre === 'caudal')?.valor ?? null;
+  return {
+    litrosPorSegundo: litros, umbralAlto: esCanal ? 120 : null, umbralBajo: esCanal ? 35 : null,
+    alto: esCanal && litros !== null ? litros >= 120 : null,
+    bajo: esCanal && litros !== null ? litros <= 35 : null,
+  };
 }
 
 export function estadoDemo(): DispositivoEstado[] {
   const ahora = Date.now();
   return DISPOSITIVOS_DEMO.map((d) => {
-    const variables = d.senal === 'SIN_DATOS' ? [] : variablesPara(d.tipo);
+    const variables = d.senal === 'SIN_DATOS' ? [] : variablesPara(d);
+    const medido = d.senal === 'SIN_DATOS' ? null
+      : ahora - (d.senal === 'SIN_SENAL' ? 45 : azar(0, 3, 0)) * 60_000;
     return {
       dispositivoId: d.id,
       codigo: d.codigo,
@@ -91,15 +106,19 @@ export function estadoDemo(): DispositivoEstado[] {
       modelo: d.modelo,
       ubicacion: d.ubicacion,
       senal: d.senal,
-      medidoEn:
-        d.senal === 'SIN_DATOS'
-          ? null
-          : new Date(ahora - (d.senal === 'SIN_SENAL' ? 45 : azar(1, 9, 0)) * 60_000).toISOString(),
+      medidoEn: medido === null ? null : new Date(medido).toISOString(),
+      vigenteHasta: medido === null ? null : vigenciaDemo(d, medido),
       variables,
       simulada: true,
-      caudal: caudalDemo(variables),
+      nombreCanal: d.nombreCanal,
+      caudal: caudalDemo(variables, d.tipo === 'CAUDALIMETRO_CANAL'),
     };
   });
+}
+
+function vigenciaDemo(d: DispositivoDemo, medido: number): string {
+  const intervalo = d.tipo === 'ESTACION_METEO' ? 15 : d.tipo === 'CAUDALIMETRO_RIO' ? 5 : 10;
+  return new Date(medido + (intervalo + 2) * 60_000).toISOString();
 }
 
 export function generarLecturaDemo(): LecturaEnVivo {
@@ -107,16 +126,18 @@ export function generarLecturaDemo(): LecturaEnVivo {
   // La mitad de las veces sale un dispositivo de río, para que su gráfico se llene rápido en la demo
   const grupo = Math.random() < 0.5 ? activos.filter((x) => x.tipo === 'CAUDALIMETRO_RIO') : activos;
   const d = grupo[Math.floor(Math.random() * grupo.length)];
-  const variables = variablesPara(d.tipo);
+  const variables = variablesPara(d);
+  const ahora = Date.now();
   return {
     dispositivoId: d.id,
     codigo: d.codigo,
     tipo: d.tipo,
-    medidoEn: new Date().toISOString(),
+    medidoEn: new Date(ahora).toISOString(),
+    vigenteHasta: vigenciaDemo(d, ahora),
     estado: Math.random() < 0.9 ? 'RECIBIDA' : 'TARDIA',
     variables,
     simulada: true,
-    caudal: caudalDemo(variables),
+    caudal: caudalDemo(variables, d.tipo === 'CAUDALIMETRO_CANAL'),
   };
 }
 
@@ -136,9 +157,12 @@ export const BANDEJA_DEMO: Notificacion[] = [
     id: 104,
     tipo: 'ALERTA_BAJO_CAUDAL',
     riegoEn: null,
-    nota: 'Canal 7 por debajo del mínimo.',
+    nota: 'Ciruelo reportó 26 L/s. Confirma el abastecimiento con la comisión antes del turno.',
     creadoEn: hace(3),
     leido: false,
+    canalCodigo: 'CAN-06',
+    medidoEn: hace(3),
+    simulada: true,
   },
   {
     id: 101,

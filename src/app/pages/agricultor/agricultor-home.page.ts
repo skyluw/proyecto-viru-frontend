@@ -10,8 +10,9 @@ import { ApiService } from '../../core/api.service';
 import { mensajeDeError } from '../../core/auth.interceptor';
 import { AuthService } from '../../core/auth.service';
 import { SENAL_LABEL, TIPO_MENSAJE_ICONO, TIPO_MENSAJE_LABEL } from '../../core/catalogos';
-import { MisPredios, Notificacion } from '../../core/models';
+import { CanalMapa, MisPredios, Notificacion } from '../../core/models';
 import { BarraSuperior } from '../../shared/barra-superior';
+import { EsquemaRed, estadoEnMapa } from '../../shared/esquema-red';
 import { haceCuanto } from '../../shared/formato';
 
 const REFRESCO_MS = 30_000; // el cliente consulta su bandeja cada 30 s
@@ -26,6 +27,7 @@ const REFRESCO_MS = 30_000; // el cliente consulta su bandeja cada 30 s
     DatePipe,
     DecimalPipe,
     BarraSuperior,
+    EsquemaRed,
     MatButtonModule,
     MatIconModule,
     MatProgressBarModule,
@@ -44,6 +46,12 @@ export class AgricultorHomePage implements OnInit {
   readonly senales = SENAL_LABEL;
   readonly predios = signal<MisPredios | null>(null);
   readonly errorPredios = signal<string | null>(null);
+  readonly ahora = signal(Date.now());
+  readonly estadoEnMapa = estadoEnMapa;
+  readonly canalesComision = computed<CanalMapa[]>(() => {
+    const datos = this.predios();
+    return datos?.canalesComision ?? datos?.canales.map((c) => ({ ...c, propio: true })) ?? [];
+  });
   readonly canalesPorId = computed(() =>
     new Map((this.predios()?.canales ?? []).map((c) => [c.dispositivoId, c])),
   );
@@ -94,6 +102,7 @@ export class AgricultorHomePage implements OnInit {
       takeUntilDestroyed(this.destroyRef),
     ).subscribe((predios) => {
       this.predios.set(predios);
+      this.ahora.set(Date.now());
       this.errorPredios.set(null);
     });
   }
