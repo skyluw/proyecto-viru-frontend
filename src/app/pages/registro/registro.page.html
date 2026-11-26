@@ -55,7 +55,7 @@
           <mat-form-field appearance="outline" class="full">
             <mat-label>Junta de regantes</mat-label>
             <mat-select formControlName="juntaReganteId">
-              @for (j of juntas; track j.id) {
+              @for (j of juntas(); track j.id) {
                 <mat-option [value]="j.id">{{ j.nombre }}</mat-option>
               }
             </mat-select>
