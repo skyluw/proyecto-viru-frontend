@@ -1,0 +1,7 @@
+{
+  "/api/**": {
+    "target": "https://viru-pc4.brazilsouth.cloudapp.azure.com",
+    "secure": true,
+    "changeOrigin": true
+  }
+}
