@@ -81,7 +81,7 @@
             <p class="nota">{{ m.nota }}</p>
           }
           @if (m.medidoEn) {
-            <p class="fecha">Medición {{ m.medidoEn | date: 'yyyy-MM-dd HH:mm:ss' : 'UTC' }} UTC</p>
+            <p class="fecha">Medición {{ m.medidoEn | date: 'dd/MM/yyyy, HH:mm:ss' : '-0500' }} · Hora Perú</p>
           }
           <p class="fecha">Recibido {{ hace(m.creadoEn) }}</p>
         </div>
@@ -129,7 +129,7 @@
                       }
                     }
                     @if (estado?.simulada) { <span>Lectura simulada</span> }
-                    <span>{{ estado?.medidoEn | date: 'yyyy-MM-dd HH:mm:ss' : 'UTC' }} UTC</span>
+                    <span>{{ estado?.medidoEn | date: 'dd/MM/yyyy, HH:mm:ss' : '-0500' }} · Hora Perú</span>
                   } @else {
                     <span>Caudal sin reporte</span>
                   }
