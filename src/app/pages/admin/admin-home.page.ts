@@ -19,7 +19,7 @@ import { LiveStreamService } from '../../core/live-stream.service';
 import { DispositivoEstado, EstadoSenal, LecturaEnVivo, Muestra, TipoDispositivo } from '../../core/models';
 import { BarraSuperior } from '../../shared/barra-superior';
 import { formatoVariable, haceCuanto, nombreVariable, variablePrincipal } from '../../shared/formato';
-import { EsquemaRed } from '../../shared/esquema-red';
+import { EsquemaRed, estadoEnMapa } from '../../shared/esquema-red';
 import { GraficoLinea } from '../../shared/grafico-linea';
 import { EnviarMensajeData, EnviarMensajeDialog } from './enviar-mensaje.dialog';
 import { PrediosDialog } from './predios.dialog';
@@ -67,6 +67,7 @@ export class AdminHomePage implements OnInit {
   readonly senalLabel = SENAL_LABEL;
   readonly formatoVariable = formatoVariable;
   readonly nombreVariable = nombreVariable;
+  readonly estadoEnMapa = estadoEnMapa;
 
   dispositivos = signal<DispositivoEstado[]>([]);
   cargando = signal(true);
@@ -194,7 +195,7 @@ export class AdminHomePage implements OnInit {
       lista.map((d) =>
         d.dispositivoId === l.dispositivoId && (!d.medidoEn || Date.parse(d.medidoEn) <= Date.parse(l.medidoEn))
           ? { ...d, medidoEn: l.medidoEn, variables: l.variables, senal: 'EN_LINEA',
-              simulada: l.simulada, caudal: l.caudal }
+              simulada: l.simulada, caudal: l.caudal, vigenteHasta: l.vigenteHasta }
           : d,
       ),
     );
