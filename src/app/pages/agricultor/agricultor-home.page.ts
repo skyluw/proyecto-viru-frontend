@@ -1,16 +1,16 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { Subject, interval, merge, startWith, switchMap } from 'rxjs';
+import { EMPTY, Subject, catchError, interval, merge, startWith, switchMap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { mensajeDeError } from '../../core/auth.interceptor';
 import { AuthService } from '../../core/auth.service';
-import { TIPO_MENSAJE_ICONO, TIPO_MENSAJE_LABEL } from '../../core/catalogos';
-import { Notificacion } from '../../core/models';
+import { SENAL_LABEL, TIPO_MENSAJE_ICONO, TIPO_MENSAJE_LABEL } from '../../core/catalogos';
+import { MisPredios, Notificacion } from '../../core/models';
 import { BarraSuperior } from '../../shared/barra-superior';
 import { haceCuanto } from '../../shared/formato';
 
@@ -24,6 +24,7 @@ const REFRESCO_MS = 30_000; // el cliente consulta su bandeja cada 30 s
   selector: 'app-agricultor-home',
   imports: [
     DatePipe,
+    DecimalPipe,
     BarraSuperior,
     MatButtonModule,
     MatIconModule,
@@ -40,6 +41,12 @@ export class AgricultorHomePage implements OnInit {
 
   readonly etiquetas = TIPO_MENSAJE_LABEL;
   readonly iconos = TIPO_MENSAJE_ICONO;
+  readonly senales = SENAL_LABEL;
+  readonly predios = signal<MisPredios | null>(null);
+  readonly errorPredios = signal<string | null>(null);
+  readonly canalesPorId = computed(() =>
+    new Map((this.predios()?.canales ?? []).map((c) => [c.dispositivoId, c])),
+  );
 
   mensajes = signal<Notificacion[]>([]);
   cargando = signal(true);
@@ -64,21 +71,31 @@ export class AgricultorHomePage implements OnInit {
     merge(interval(REFRESCO_MS), this.recargar$)
       .pipe(
         startWith(0),
-        switchMap(() => this.api.bandeja(this.soloNoLeidos())),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (lista) => {
-          this.mensajes.set(lista);
-          this.actualizadoEn.set(new Date());
-          this.cargando.set(false);
-          this.error.set(null);
-        },
-        error: (err) => {
+        switchMap(() => this.api.bandeja(this.soloNoLeidos()).pipe(catchError((err) => {
           this.error.set(mensajeDeError(err));
           this.cargando.set(false);
-        },
+          return EMPTY;
+        }))),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((lista) => {
+        this.mensajes.set(lista);
+        this.actualizadoEn.set(new Date());
+        this.cargando.set(false);
+        this.error.set(null);
       });
+
+    interval(REFRESCO_MS).pipe(
+      startWith(0),
+      switchMap(() => this.api.misPredios().pipe(catchError((err) => {
+        this.errorPredios.set(mensajeDeError(err));
+        return EMPTY;
+      }))),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe((predios) => {
+      this.predios.set(predios);
+      this.errorPredios.set(null);
+    });
   }
 
   cambiarFiltro(valor: boolean): void {
