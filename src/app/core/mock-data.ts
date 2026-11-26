@@ -1,6 +1,7 @@
 // Datos simulados para el modo demo (npm run start:demo). No se usan con el backend real.
 import {
   DispositivoEstado,
+  EstadoCaudal,
   EstadoSenal,
   LecturaEnVivo,
   Notificacion,
@@ -74,21 +75,31 @@ function variablesPara(tipo: TipoDispositivo): Variable[] {
   ];
 }
 
+function caudalDemo(variables: Variable[]): EstadoCaudal {
+  const caudal = variables.find((v) => v.nombre === 'caudal');
+  return { litrosPorSegundo: caudal ? caudal.valor * 1000 : null, umbralAlto: null, alto: null };
+}
+
 export function estadoDemo(): DispositivoEstado[] {
   const ahora = Date.now();
-  return DISPOSITIVOS_DEMO.map((d) => ({
-    dispositivoId: d.id,
-    codigo: d.codigo,
-    tipo: d.tipo,
-    modelo: d.modelo,
-    ubicacion: d.ubicacion,
-    senal: d.senal,
-    medidoEn:
-      d.senal === 'SIN_DATOS'
-        ? null
-        : new Date(ahora - (d.senal === 'SIN_SENAL' ? 45 : azar(1, 9, 0)) * 60_000).toISOString(),
-    variables: d.senal === 'SIN_DATOS' ? [] : variablesPara(d.tipo),
-  }));
+  return DISPOSITIVOS_DEMO.map((d) => {
+    const variables = d.senal === 'SIN_DATOS' ? [] : variablesPara(d.tipo);
+    return {
+      dispositivoId: d.id,
+      codigo: d.codigo,
+      tipo: d.tipo,
+      modelo: d.modelo,
+      ubicacion: d.ubicacion,
+      senal: d.senal,
+      medidoEn:
+        d.senal === 'SIN_DATOS'
+          ? null
+          : new Date(ahora - (d.senal === 'SIN_SENAL' ? 45 : azar(1, 9, 0)) * 60_000).toISOString(),
+      variables,
+      simulada: true,
+      caudal: caudalDemo(variables),
+    };
+  });
 }
 
 export function generarLecturaDemo(): LecturaEnVivo {
@@ -96,13 +107,16 @@ export function generarLecturaDemo(): LecturaEnVivo {
   // La mitad de las veces sale un dispositivo de río, para que su gráfico se llene rápido en la demo
   const grupo = Math.random() < 0.5 ? activos.filter((x) => x.tipo === 'CAUDALIMETRO_RIO') : activos;
   const d = grupo[Math.floor(Math.random() * grupo.length)];
+  const variables = variablesPara(d.tipo);
   return {
     dispositivoId: d.id,
     codigo: d.codigo,
     tipo: d.tipo,
     medidoEn: new Date().toISOString(),
     estado: Math.random() < 0.9 ? 'RECIBIDA' : 'TARDIA',
-    variables: variablesPara(d.tipo),
+    variables,
+    simulada: true,
+    caudal: caudalDemo(variables),
   };
 }
 

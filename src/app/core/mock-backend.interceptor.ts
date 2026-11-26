@@ -1,8 +1,18 @@
 import { HttpErrorResponse, HttpInterceptorFn, HttpResponse } from '@angular/common/http';
 import { delay, of, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { BANDEJA_DEMO, estadoDemo } from './mock-data';
-import { EnviarMensajeRequest, LoginRequest } from './models';
+import { BANDEJA_DEMO, DISPOSITIVOS_DEMO, estadoDemo } from './mock-data';
+import { AsignacionPredio, EnviarMensajeRequest, LoginRequest, Predio } from './models';
+
+const JUNTAS_DEMO = ['Huacapongo', 'Choloque', 'Queneto'].map((nombre, i) => ({
+  id: i + 1, nombre, regionId: 1,
+}));
+const CANALES_DEMO = DISPOSITIVOS_DEMO.filter((d) => d.tipo === 'CAUDALIMETRO_CANAL').map((d) => ({
+  id: d.id, codigo: d.codigo, nombre: d.codigo,
+}));
+const PREDIOS_DEMO: Predio[] = [
+  { id: 1, codigo: 'DEMO-01', nombre: 'Predio de muestra', agricultorId: 2, canales: [CANALES_DEMO[0]] },
+];
 
 /**
  * Solo actúa en modo demo (environment.useMock = true). Responde las llamadas /api
@@ -43,6 +53,36 @@ export const mockBackendInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   if (url.endsWith('/api/admin/dispositivos/estado')) return ok(estadoDemo());
+
+  if (url.endsWith('/api/catalogo/riego')) {
+    return ok({ regiones: [{ id: 1, nombre: 'Virú' }], juntas: JUNTAS_DEMO });
+  }
+  if (/\/api\/admin\/dispositivos\/\d+\/historial$/.test(url)) return ok([]);
+  if (url.endsWith('/api/admin/predios')) {
+    return ok({
+      agricultores: [{ id: 2, nombre: 'Agricultor demo', correo: 'agricultor@viru.test', junta: 'Huacapongo' }],
+      canales: CANALES_DEMO, predios: PREDIOS_DEMO,
+    });
+  }
+  if (url.includes('/api/admin/predios/') && req.method === 'PUT') {
+    const datos = req.body as AsignacionPredio;
+    const codigo = decodeURIComponent(url.split('/').at(-1)!);
+    const indice = PREDIOS_DEMO.findIndex((p) => p.codigo === codigo);
+    const predio = {
+      id: indice < 0 ? PREDIOS_DEMO.length + 1 : PREDIOS_DEMO[indice].id,
+      codigo,
+      nombre: datos.nombre,
+      agricultorId: datos.agricultorId,
+      canales: CANALES_DEMO.filter((c) => datos.canalIds.includes(c.id)),
+    };
+    if (indice < 0) PREDIOS_DEMO.push(predio);
+    else PREDIOS_DEMO[indice] = predio;
+    return ok(null, 204);
+  }
+  if (url.endsWith('/api/farmer/predios')) {
+    const ids = PREDIOS_DEMO.flatMap((p) => p.canales.map((c) => c.id));
+    return ok({ predios: PREDIOS_DEMO, canales: estadoDemo().filter((d) => ids.includes(d.dispositivoId)) });
+  }
 
   if (url.endsWith('/api/admin/mensajes') && req.method === 'POST') {
     const body = req.body as EnviarMensajeRequest;
