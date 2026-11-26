@@ -1,4 +1,4 @@
-<app-barra-superior subtitulo="Mis avisos" />
+<app-barra-superior subtitulo="Mis predios y avisos" />
 
 @if (cargando()) {
   <mat-progress-bar mode="indeterminate" />
@@ -56,6 +56,12 @@
         <div class="cuerpo">
           <div class="titulo">
             <h3>{{ etiquetas[m.tipo] }}</h3>
+            @if (m.canalCodigo) {
+              <span class="chip muted sin-punto">{{ m.canalCodigo }} · Automática</span>
+            }
+            @if (m.simulada) {
+              <span class="chip muted sin-punto">Simulación</span>
+            }
             @if (!m.leido) {
               <span class="chip ok sin-punto nuevo">Nuevo</span>
             }
@@ -65,6 +71,9 @@
           }
           @if (m.nota) {
             <p class="nota">{{ m.nota }}</p>
+          }
+          @if (m.medidoEn) {
+            <p class="fecha">Medición {{ m.medidoEn | date: 'yyyy-MM-dd HH:mm:ss' : 'UTC' }} UTC</p>
           }
           <p class="fecha">Recibido {{ hace(m.creadoEn) }}</p>
         </div>
@@ -80,6 +89,43 @@
           <mat-icon>inbox</mat-icon>
           <p>{{ soloNoLeidos() ? 'No tienes avisos nuevos.' : 'Todavía no has recibido avisos.' }}</p>
         </div>
+      }
+    }
+  </section>
+
+  <section class="predios" aria-labelledby="titulo-predios">
+    <h2 id="titulo-predios">Mis predios y canales</h2>
+    @if (errorPredios()) {
+      <p class="error" role="alert">{{ errorPredios() }}</p>
+    }
+    @if (predios(); as datos) {
+      @for (p of datos.predios; track p.id) {
+        <article class="predio">
+          <header><h3>{{ p.nombre }}</h3><span>{{ p.codigo }}</span></header>
+          <ul>
+            @for (c of p.canales; track c.id) {
+              @let estado = canalesPorId().get(c.id);
+              <li>
+                <div>
+                  <strong>{{ c.nombre }}</strong>
+                  <span class="dato-secundario">{{ c.codigo }} · {{ estado ? senales[estado.senal] : 'Inactivo' }}</span>
+                </div>
+                <div class="caudal" [class.alto]="estado?.caudal?.alto">
+                  @if (estado?.caudal?.litrosPorSegundo != null) {
+                    <strong>{{ estado?.caudal?.litrosPorSegundo | number: '1.0-2' }} L/s</strong>
+                    @if (estado?.caudal?.alto) { <span>Caudal alto</span> }
+                    @if (estado?.simulada) { <span>Lectura simulada</span> }
+                    <span>{{ estado?.medidoEn | date: 'yyyy-MM-dd HH:mm:ss' : 'UTC' }} UTC</span>
+                  } @else {
+                    <span>Caudal sin reporte</span>
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+        </article>
+      } @empty {
+        <p>Tu junta puede confirmar qué canales abastecen tus predios.</p>
       }
     }
   </section>

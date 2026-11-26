@@ -2,6 +2,57 @@
   max-width: 780px;
 }
 
+.predios {
+  margin-top: 30px;
+}
+
+.predio {
+  margin-bottom: 12px;
+  background: #fff;
+  border: 1px solid var(--viru-linea);
+  border-radius: var(--radio-panel);
+  padding: 14px 18px;
+
+  header, li {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+  }
+
+  h3, ul {
+    margin: 0;
+  }
+
+  header span, .dato-secundario, .caudal span {
+    color: var(--viru-texto-2);
+    font-size: 13px;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  li {
+    border-top: 1px solid var(--viru-linea);
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+
+  .dato-secundario, .caudal span {
+    display: block;
+  }
+
+  .caudal {
+    text-align: right;
+  }
+
+  .caudal.alto strong, .caudal.alto span:first-of-type {
+    color: var(--viru-alerta);
+  }
+}
+
 .encabezado {
   margin-bottom: 22px;
   h1 {

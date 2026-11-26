@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -18,8 +18,9 @@ import { Observable } from 'rxjs';
 import { LogoViru } from '../../shared/logo-viru';
 import { PaisajeCanales } from '../../shared/paisaje-canales';
 import { mensajeDeError } from '../../core/auth.interceptor';
+import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
-import { JUNTAS, PASSWORD_PATTERN } from '../../core/catalogos';
+import { Junta, PASSWORD_PATTERN } from '../../core/catalogos';
 import { UserResponse } from '../../core/models';
 
 type TipoCuenta = 'FARMER' | 'ADMIN';
@@ -49,12 +50,13 @@ function passwordsIguales(grupo: AbstractControl): ValidationErrors | null {
   templateUrl: './registro.page.html',
   styleUrl: '../auth.scss',
 })
-export class RegistroPage {
+export class RegistroPage implements OnInit {
   private fb = inject(FormBuilder);
   private auth = inject(AuthService);
   private router = inject(Router);
+  private api = inject(ApiService);
 
-  readonly juntas = JUNTAS;
+  readonly juntas = signal<Junta[]>([]);
   tipo = signal<TipoCuenta>('FARMER');
   cargando = signal(false);
   error = signal<string | null>(null);
@@ -73,6 +75,13 @@ export class RegistroPage {
     },
     { validators: passwordsIguales },
   );
+
+  ngOnInit(): void {
+    this.api.catalogoRiego().subscribe({
+      next: ({ juntas }) => this.juntas.set(juntas),
+      error: (err) => this.error.set(mensajeDeError(err)),
+    });
+  }
 
   cambiarTipo(tipo: TipoCuenta): void {
     this.tipo.set(tipo);
