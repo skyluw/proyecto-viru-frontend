@@ -58,6 +58,8 @@ export interface EstadoCaudal {
   litrosPorSegundo: number | null;
   umbralAlto: number | null;
   alto: boolean | null;
+  umbralBajo?: number | null;
+  bajo?: boolean | null;
 }
 
 export interface Muestra {
@@ -78,6 +80,7 @@ export interface DispositivoEstado {
   nombreCanal?: string | null;
   simulada?: boolean | null;
   caudal?: EstadoCaudal | null;
+  vigenteHasta?: string | null;
 }
 
 /** Evento "lectura" que llega por el stream SSE. */
@@ -87,6 +90,7 @@ export interface LecturaEnVivo extends Muestra {
   tipo: TipoDispositivo;
   estado: EstadoTransmision;
   caudal?: EstadoCaudal | null;
+  vigenteHasta?: string | null;
 }
 
 // ---- Mensajes (MensajeController: /api/admin/mensajes) ----
@@ -149,4 +153,10 @@ export interface PanelPredios {
 export interface MisPredios {
   predios: Predio[];
   canales: DispositivoEstado[];
+  comision: string;
+  canalesComision: CanalMapa[];
 }
+
+export type CanalMapa = Pick<DispositivoEstado,
+  'dispositivoId' | 'codigo' | 'nombreCanal' | 'senal' | 'medidoEn' | 'vigenteHasta' | 'simulada' | 'caudal'>
+  & { propio: boolean };
