@@ -1,0 +1,119 @@
+<section class="mapa" aria-label="Mapa de riego">
+  <header class="top">
+    <div>
+      <h2>Mapa de riego</h2>
+      <p>{{ administrador() ? 'Cabeceras y puntos de monitoreo' : (comision() || 'Canales de tu comisión') }}</p>
+    </div>
+    <div class="controles">
+      @if (!administrador()) {
+        <div class="filtro" role="group" aria-label="Canales a mostrar">
+          <button type="button" [attr.aria-pressed]="!soloPropios()" (click)="filtrar(false)">Comisión</button>
+          <button type="button" [attr.aria-pressed]="soloPropios()" (click)="filtrar(true)">Mis canales</button>
+        </div>
+      }
+      <button type="button" class="ampliar" [attr.aria-pressed]="ampliado()" (click)="ampliado.set(!ampliado())">
+        {{ ampliado() ? 'Ajustar mapa' : 'Ampliar mapa' }}
+      </button>
+    </div>
+  </header>
+
+  <div class="distribucion">
+    <figure class="figura">
+      <div class="visor" [class.ampliado]="ampliado()" tabindex="0" aria-label="Plano interactivo">
+        <div class="plano">
+          <img src="mapas/red-viru.svg" alt="" draggable="false" />
+          <svg class="guias" viewBox="0 0 1380 1290" preserveAspectRatio="none" aria-hidden="true">
+            @for (p of lista(); track p.dispositivoId) {
+              @if (p.pin; as pin) {
+                <line [attr.x1]="pin.x" [attr.y1]="pin.y"
+                      [attr.x2]="pin.controlX" [attr.y2]="pin.controlY" />
+                <circle [attr.cx]="pin.x" [attr.cy]="pin.y" r="4" />
+              }
+            }
+          </svg>
+          @for (p of lista(); track p.dispositivoId) {
+            @if (p.pin; as pin) {
+              <button type="button" class="punto" [class]="p.estado"
+                      [class.propio]="p.propio"
+                      [class.referencia]="p.tipo && p.tipo !== 'CAUDALIMETRO_CANAL'"
+                      [style.left.%]="pin.controlX * 100 / 1380"
+                      [style.top.%]="pin.controlY * 100 / 1290"
+                      [attr.aria-label]="p.nombre + ' · ' + p.codigo + ' · ' + p.etiqueta"
+                      [attr.aria-pressed]="seleccionado()?.dispositivoId === p.dispositivoId"
+                      [title]="p.nombre + ' · ' + p.etiqueta" (click)="seleccionadoId.set(p.dispositivoId)">
+                {{ p.referencia }}
+              </button>
+            }
+          }
+        </div>
+      </div>
+      <figcaption>
+        <ul class="leyenda" aria-label="Estados de la lectura">
+          <li class="vigente"><span>•</span> Vigente</li>
+          <li class="bajo"><span>↓</span> Caudal bajo</li>
+          <li class="alto"><span>↑</span> Caudal alto</li>
+          <li class="vencida"><span>!</span> Vencida</li>
+          <li class="sin-datos"><span>–</span> Sin lectura</li>
+        </ul>
+        <small>Esquema sin escala a partir del plano PCG-01 · Consorcio Yacu, 2026</small>
+      </figcaption>
+    </figure>
+
+    <aside class="comparacion" aria-label="Comparación de canales">
+      @if (seleccionado(); as c) {
+        <div class="lectura" aria-live="polite">
+          <div class="codigo">{{ c.codigo }} @if (c.referencia) { · {{ c.referencia }} }</div>
+          <h3>{{ c.nombre }}</h3>
+          @if (c.propio) { <p class="propiedad">Abastece a tus predios</p> }
+          <p class="estado" [class]="c.estado"><span>{{ c.simbolo }}</span> {{ c.etiqueta }}</p>
+          @if (c.caudal !== null) {
+            <div class="valor"><strong>{{ c.caudal | number: '1.0-2' }}</strong> L/s</div>
+          }
+          @if (c.medidoEn) {
+            <p class="meta">{{ c.medidoEn | date: 'dd/MM/yyyy, HH:mm:ss' : '-0500' }} · Hora Perú</p>
+            @if (c.simulada) {
+              <p class="meta">Lectura simulada</p>
+            } @else if (c.simulada === null) {
+              <p class="meta">Origen sin confirmar</p>
+            }
+          }
+          @if (c.umbralAlto !== null) {
+            <p class="meta">
+              Umbrales (L/s)
+              @if (c.umbralBajo !== null) { {{ c.umbralBajo | number: '1.0-2' }} bajo · }
+              {{ c.umbralAlto | number: '1.0-2' }} alto
+            </p>
+          }
+          @switch (c.estado) {
+            @case ('bajo') { <p class="contexto">Confirma el abastecimiento con la comisión antes del turno.</p> }
+            @case ('alto') { <p class="contexto">Revisa el canal antes de iniciar el turno.</p> }
+            @case ('vencida') { <p class="contexto">Confirma el caudal actual antes de ajustar el turno.</p> }
+          }
+          @if (administrador()) {
+            <button type="button" class="ver-historial" aria-controls="detalle-sensor"
+                    (click)="verHistorial.emit()">Ver historial del sensor ↓</button>
+          }
+        </div>
+      }
+      <div class="listado">
+        <h4>{{ soloPropios() ? 'Mis canales' : 'Canales para comparar' }}</h4>
+        <ul>
+          @for (c of canales(); track c.dispositivoId) {
+            <li>
+              <button type="button" [attr.aria-pressed]="seleccionado()?.dispositivoId === c.dispositivoId"
+                      (click)="seleccionadoId.set(c.dispositivoId)" [title]="c.etiqueta">
+                <span><strong>{{ c.nombre }}</strong><small>{{ c.codigo }} @if (c.propio) { · Mi canal }</small></span>
+                <span class="cantidad" [class]="c.estado">
+                  @if (c.caudal !== null) { {{ c.caudal | number: '1.0-2' }} L/s } @else { — }
+                  <small>{{ c.etiqueta }}</small>
+                </span>
+              </button>
+            </li>
+          } @empty {
+            <li class="vacio">Cuando se vinculen predios a sus canales, estarán disponibles aquí.</li>
+          }
+        </ul>
+      </div>
+    </aside>
+  </div>
+</section>
