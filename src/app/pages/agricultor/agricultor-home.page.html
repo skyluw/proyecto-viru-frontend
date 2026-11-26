@@ -9,7 +9,9 @@
     <h1>Hola, {{ auth.usuario()?.nombre }}</h1>
     <p class="sub">
       @if (noLeidos() > 0) {
-        Tienes {{ noLeidos() }} {{ noLeidos() === 1 ? 'aviso nuevo' : 'avisos nuevos' }}.
+        Tienes <button type="button" class="ir-avisos" aria-controls="avisos"
+                       (click)="avisos.scrollIntoView({ block: 'start' })">{{ noLeidos() }}
+          {{ noLeidos() === 1 ? 'aviso nuevo' : 'avisos nuevos' }}</button>.
       } @else {
         Estás al día con tus avisos.
       }
@@ -42,7 +44,13 @@
     <p class="error" role="alert"><mat-icon>cloud_off</mat-icon> {{ error() }}</p>
   }
 
-  <div class="barra-lista">
+  @if (predios(); as datos) {
+    <div class="mapa-predios">
+      <app-esquema-red [dispositivos]="canalesComision()" [comision]="datos.comision" />
+    </div>
+  }
+
+  <div #avisos id="avisos" class="barra-lista">
     <h2>Avisos</h2>
     <mat-slide-toggle [checked]="soloNoLeidos()" (change)="cambiarFiltro($event.checked)">
       Solo los nuevos
@@ -110,10 +118,16 @@
                   <strong>{{ c.nombre }}</strong>
                   <span class="dato-secundario">{{ c.codigo }} · {{ estado ? senales[estado.senal] : 'Inactivo' }}</span>
                 </div>
-                <div class="caudal" [class.alto]="estado?.caudal?.alto">
+                <div class="caudal" [class.alto]="estado && estadoEnMapa(estado, ahora()) === 'alto'">
                   @if (estado?.caudal?.litrosPorSegundo != null) {
                     <strong>{{ estado?.caudal?.litrosPorSegundo | number: '1.0-2' }} L/s</strong>
-                    @if (estado?.caudal?.alto) { <span>Caudal alto</span> }
+                    @if (estado) {
+                      @switch (estadoEnMapa(estado, ahora())) {
+                        @case ('alto') { <span>Caudal alto</span> }
+                        @case ('bajo') { <span>Caudal bajo</span> }
+                        @case ('vencida') { <span>Lectura vencida</span> }
+                      }
+                    }
                     @if (estado?.simulada) { <span>Lectura simulada</span> }
                     <span>{{ estado?.medidoEn | date: 'yyyy-MM-dd HH:mm:ss' : 'UTC' }} UTC</span>
                   } @else {
