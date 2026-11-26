@@ -15,9 +15,14 @@
         }
       </p>
     </div>
-    <button mat-flat-button class="accion" (click)="abrirEnvio()">
-      <mat-icon>campaign</mat-icon> Enviar aviso
-    </button>
+    <div class="panel-acciones">
+      <button mat-stroked-button class="accion" (click)="abrirPredios()">
+        <mat-icon>grid_view</mat-icon> Predios y canales
+      </button>
+      <button mat-flat-button class="accion" (click)="abrirEnvio()">
+        <mat-icon>campaign</mat-icon> Enviar aviso
+      </button>
+    </div>
   </header>
 
   @if (error()) {
@@ -67,7 +72,6 @@
       [ultimaLectura]="ultimaLectura()"
       (seleccionar)="seleccionadoId.set($event)"
     />
-    <p class="nota-esquema">Esquema sin escala. Toca un sensor para ver su detalle.</p>
   </section>
 
   <section class="contenido">
@@ -118,7 +122,7 @@
               <mat-icon>{{ icono(d.tipo) }}</mat-icon>
               <span>
                 <strong>{{ d.codigo }}</strong>
-                <small>{{ tipoLabel[d.tipo] }}</small>
+                <small>{{ d.nombreCanal || tipoLabel[d.tipo] }}</small>
               </span>
             </span>
             <span class="ubicacion">{{ d.ubicacion ?? '—' }}</span>
@@ -127,8 +131,8 @@
               {{ hace(d.medidoEn) }}
             </span>
             <span class="valor num">
-              @if (d.variables.length) {
-                {{ formatoVariable(d.variables[0]) }}
+              @if (principal(d); as v) {
+                {{ formatoVariable(v) }}
               } @else {
                 —
               }
@@ -141,16 +145,31 @@
     </div>
 
     <!-- Detalle del sensor elegido -->
-    <aside class="panel detalle" aria-live="polite">
+    <aside id="detalle-sensor" class="panel detalle" aria-live="polite">
       @if (seleccionado(); as d) {
         <div class="detalle-cabecera">
           <div class="icono-tipo"><mat-icon>{{ icono(d.tipo) }}</mat-icon></div>
           <div class="detalle-titulo">
-            <h2>{{ d.codigo }}</h2>
+            <h2>{{ d.nombreCanal || d.codigo }}</h2>
+            @if (d.nombreCanal) { <p class="sub">{{ d.codigo }}</p> }
             <p class="sub">{{ d.ubicacion }}</p>
           </div>
           <span class="chip" [class]="claseSenal(d.senal)">{{ senalLabel[d.senal] }}</span>
         </div>
+
+        @if (d.simulada) {
+          <p class="nota">Última lectura simulada</p>
+        }
+        @if (d.caudal; as caudal) {
+          @if (caudal.litrosPorSegundo !== null && caudal.umbralAlto !== null) {
+            <p class="estado-caudal" [class.alto]="caudal.alto">
+              {{ caudal.alto ? 'Caudal alto' : 'Caudal dentro del umbral' }}
+              · Umbral {{ numero(caudal.umbralAlto) }} L/s
+            </p>
+          } @else if (d.tipo !== 'ESTACION_METEO' && caudal.litrosPorSegundo === null) {
+            <p class="nota">Caudal sin reporte</p>
+          }
+        }
 
         @if (principal(d); as v) {
           <div class="lectura-principal">
@@ -162,12 +181,13 @@
 
         @if (puntosSeleccionado().length > 1) {
           <app-grafico-linea [puntos]="puntosSeleccionado()" [etiqueta]="etiquetaGrafico()" />
-          <p class="nota">Lecturas recibidas desde que abriste el panel.</p>
+          <p class="nota">Historial del dispositivo</p>
         } @else if (d.medidoEn) {
-          <p class="nota esperando">El gráfico aparece cuando llegue la siguiente lectura.</p>
+          <p class="nota esperando">Una lectura disponible para esta variable.</p>
         } @else {
           <p class="nota esperando">Este sensor todavía no ha enviado lecturas.</p>
         }
+        @if (historialError()) { <p class="nota">No se pudo cargar el historial guardado.</p> }
 
         @if (d.variables.length) {
           <ul class="variables">
@@ -178,7 +198,7 @@
               </li>
             }
           </ul>
-          <p class="nota">Medido el {{ d.medidoEn | date: "d 'de' MMMM, HH:mm:ss" }}. {{ d.modelo }}</p>
+          <p class="nota">Medido el {{ d.medidoEn | date: 'yyyy-MM-dd HH:mm:ss' : 'UTC' }} UTC. {{ d.modelo }}</p>
         }
 
         @if (d.tipo !== 'ESTACION_METEO') {

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -9,7 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { ApiService } from '../../core/api.service';
 import { mensajeDeError } from '../../core/auth.interceptor';
-import { JUNTAS, REGIONES, TIPO_MENSAJE_LABEL } from '../../core/catalogos';
+import { CatalogoRiego, TIPO_MENSAJE_LABEL } from '../../core/catalogos';
 import { AlcanceMensaje, EnviarMensajeRequest, MensajeEnviado, TipoMensaje } from '../../core/models';
 
 export interface EnviarMensajeData {
@@ -57,7 +57,7 @@ export interface EnviarMensajeData {
           <mat-form-field appearance="outline" class="full">
             <mat-label>Junta de regantes</mat-label>
             <mat-select formControlName="juntaReganteId">
-              @for (j of juntas; track j.id) {
+              @for (j of catalogo()?.juntas ?? []; track j.id) {
                 <mat-option [value]="j.id">{{ j.nombre }}</mat-option>
               }
             </mat-select>
@@ -67,7 +67,7 @@ export interface EnviarMensajeData {
           <mat-form-field appearance="outline" class="full">
             <mat-label>Región</mat-label>
             <mat-select formControlName="regionId">
-              @for (r of regiones; track r.id) {
+              @for (r of catalogo()?.regiones ?? []; track r.id) {
                 <mat-option [value]="r.id">{{ r.nombre }}</mat-option>
               }
             </mat-select>
@@ -95,7 +95,7 @@ export interface EnviarMensajeData {
       </mat-dialog-content>
       <mat-dialog-actions align="end">
         <button mat-button type="button" mat-dialog-close>Cancelar</button>
-        <button mat-flat-button type="submit" [disabled]="enviando()">
+        <button mat-flat-button type="submit" [disabled]="enviando() || !catalogo()">
           <mat-icon>send</mat-icon> Enviar
         </button>
       </mat-dialog-actions>
@@ -110,16 +110,17 @@ export interface EnviarMensajeData {
       background: var(--viru-warn-bg); padding: 8px 12px; border-radius: 8px; font-size: 14px; }
   `,
 })
-export class EnviarMensajeDialog {
+export class EnviarMensajeDialog implements OnInit {
   private fb = inject(FormBuilder);
   private api = inject(ApiService);
   private ref = inject(MatDialogRef<EnviarMensajeDialog, MensajeEnviado>);
   private data = inject<EnviarMensajeData | null>(MAT_DIALOG_DATA, { optional: true });
 
-  readonly juntas = JUNTAS;
-  readonly regiones = REGIONES;
+  readonly catalogo = signal<CatalogoRiego | null>(null);
   readonly etiquetas = TIPO_MENSAJE_LABEL;
-  readonly tipos: TipoMensaje[] = ['HORA_RIEGO', 'ALERTA_BAJO_CAUDAL', 'ALERTA_ALTO_CAUDAL'];
+  readonly tipos: TipoMensaje[] = [
+    'HORA_RIEGO', 'ALERTA_BAJO_CAUDAL', 'ALERTA_ALTO_CAUDAL', 'ALERTA_METEOROLOGICA',
+  ];
 
   enviando = signal(false);
   error = signal<string | null>(null);
@@ -133,14 +134,23 @@ export class EnviarMensajeDialog {
     nota: [this.data?.notaSugerida ?? ''],
   });
 
+  ngOnInit(): void {
+    this.api.catalogoRiego().subscribe({
+      next: (catalogo) => this.catalogo.set(catalogo),
+      error: (err) => this.error.set(mensajeDeError(err)),
+    });
+  }
+
   enviar(): void {
     const v = this.form.getRawValue();
     const c = this.form.controls;
 
     // Validaciones que dependen de varios campos (igual que en el backend)
     const destino = v.alcance === 'JUNTA' ? c.juntaReganteId : c.regionId;
+    const otro = v.alcance === 'JUNTA' ? c.regionId : c.juntaReganteId;
+    otro.setErrors(null);
     destino.setErrors(destino.value ? null : { required: true });
-    if (v.tipo === 'HORA_RIEGO') c.riegoEn.setErrors(v.riegoEn ? null : { required: true });
+    c.riegoEn.setErrors(v.tipo === 'HORA_RIEGO' && !v.riegoEn ? { required: true } : null);
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
