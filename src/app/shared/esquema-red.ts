@@ -1,199 +1,138 @@
-import { Component, computed, input, output } from '@angular/core';
-import { DispositivoEstado, EstadoSenal, LecturaEnVivo } from '../core/models';
+import { Component, computed, input, output, signal } from '@angular/core';
+import { SENAL_LABEL } from '../core/catalogos';
+import { DispositivoEstado, LecturaEnVivo } from '../core/models';
 
-interface Nodo {
-  id: number;
-  codigo: string;
-  senal: EstadoSenal;
-  x: number;
-  y: number;
-  r: number;
-  // punto donde el canal sale del río (solo canales)
-  desdeX?: number;
-  desdeY?: number;
-  etiquetaY: number;
-}
+// Posiciones en píxeles sobre el plano PC2 adjunto (2048 × 1403), incluido el encabezado.
+// Nxx son las cabeceras del plano. Hx y M1 son puntos de referencia del estudio.
+const PUNTOS_PC2 = [
+  ['CAN-01', 'N01', 1108, 605],
+  ['CAN-02', 'N02', 1211, 463],
+  ['CAN-03', 'N03', 302, 772],
+  ['CAN-04', 'N04', 1211, 392],
+  ['CAN-05', 'N05', 854, 1019],
+  ['CAN-06', 'N06', 945, 959],
+  ['CAN-07', 'N07', 1100, 648],
+  ['CAN-08', 'N08', 1258, 185],
+  ['CAN-09', 'N09', 1008, 805],
+  ['CAN-10', 'N10', 1128, 538],
+  ['CAN-11', 'N11', 278, 1352],
+  ['CAN-12', 'N12', 1115, 595],
+  ['CAN-13', 'N13', 106, 662],
+  ['CAN-14', 'N14', 472, 916],
+  ['CAN-15', 'N15', 1283, 135],
+  ['CAN-16', 'N16', 1247, 199],
+  ['CAN-17', 'N17', 1067, 718],
+  ['CAN-18', 'N18', 1273, 162],
+  ['CAN-19', 'N19', 823, 1034],
+  ['CAN-20', 'N20', 1258, 308],
+  ['HID-01', 'H1', 1249, 168],
+  ['HID-02', 'H2', 1181, 365],
+  ['HID-03', 'H3', 243, 1324],
+  ['MET-01', 'M1', 1045, 798],
+] as const;
 
-const ANCHO_RIO = 1000;
-/** Curva suave del río: y según x. */
-const rioY = (x: number) => 128 + 12 * Math.sin(x / 135) - 6 * Math.cos(x / 61);
-
-/**
- * Esquema hidráulico (no a escala) del río Huacapongo con sus canales y la estación
- * meteorológica. Cada sensor es un punto coloreado según su señal; al hacer clic se elige.
- */
 @Component({
   selector: 'app-esquema-red',
   template: `
-    <div class="contenedor">
-      <svg
-        [attr.viewBox]="'0 0 1080 256'"
-        role="group"
-        aria-label="Esquema del río Huacapongo, sus canales y la estación meteorológica"
-      >
-        <!-- Río -->
-        <path class="rio-borde" [attr.d]="rioPath" />
-        <path class="rio" [attr.d]="rioPath" />
-        <text class="nombre-rio" x="24" [attr.y]="rioY(24) + 34">Río Huacapongo</text>
-
-        <!-- Canales -->
-        @for (n of canales(); track n.id) {
-          <line class="canal" [attr.x1]="n.desdeX" [attr.y1]="n.desdeY" [attr.x2]="n.x" [attr.y2]="n.y" />
+    <figure aria-label="Plano de la red de riego de Virú">
+      <div class="herramientas">
+        <span>Plano PCG-01 · Cabeceras de canal y puntos de monitoreo</span>
+        <div class="enlaces">
+          <button type="button" (click)="ampliado.set(!ampliado())" [attr.aria-pressed]="ampliado()">
+            {{ ampliado() ? 'Ajustar plano' : 'Ampliar plano' }}
+          </button>
+          <a [href]="ruta" target="_blank" rel="noopener">Ver plano completo</a>
+        </div>
+      </div>
+      <div class="visor" [class.ampliado]="ampliado()">
+        <div class="plano">
+          <img [src]="ruta" alt="Plano PC2 con trazados de canales, cauces y sectores de riego" />
+          @for (p of nodos(); track p.dispositivo.dispositivoId) {
+            <button
+              type="button"
+              class="punto"
+              [class]="p.dispositivo.senal"
+              [class.actual]="p.dispositivo.dispositivoId === seleccionadoId()"
+              [class.reciente]="p.dispositivo.dispositivoId === ultimaLectura()?.dispositivoId"
+              [class.caudal-alto]="p.dispositivo.caudal?.alto"
+              [style.left.%]="p.x"
+              [style.top.%]="p.y"
+              [attr.aria-label]="p.etiqueta"
+              [attr.aria-pressed]="p.dispositivo.dispositivoId === seleccionadoId()"
+              [title]="p.etiqueta"
+              (click)="seleccionar.emit(p.dispositivo.dispositivoId)"
+            ></button>
+          }
+        </div>
+      </div>
+      <figcaption>
+        <span>Consorcio Yacu (2026) · Referencias del estudio en WGS 84 / UTM 17S</span>
+        @if (seleccionado(); as d) {
+          <a href="#detalle-sensor">Ver detalle de {{ d.nombreCanal || d.codigo }}</a>
         }
-
-        <!-- Pulso de la última lectura recibida -->
-        @for (p of pulso(); track p.clave) {
-          <circle class="pulso" [attr.cx]="p.x" [attr.cy]="p.y" [attr.r]="p.r" />
-        }
-
-        <!-- Sensores -->
-        @for (n of todos(); track n.id) {
-          <g
-            class="nodo"
-            [class]="n.senal"
-            [class.elegido]="n.id === seleccionadoId()"
-            role="button"
-            tabindex="0"
-            [attr.aria-label]="n.codigo + ', ' + textoSenal[n.senal]"
-            (click)="seleccionar.emit(n.id)"
-            (keydown.enter)="seleccionar.emit(n.id)"
-            (keydown.space)="seleccionar.emit(n.id); $event.preventDefault()"
-          >
-            <title>{{ n.codigo }}, {{ textoSenal[n.senal] }}</title>
-            <circle class="anillo" [attr.cx]="n.x" [attr.cy]="n.y" [attr.r]="n.r + 6" />
-            @if (esMeteo(n)) {
-              <rect
-                class="punto"
-                [attr.x]="n.x - n.r"
-                [attr.y]="n.y - n.r"
-                [attr.width]="n.r * 2"
-                [attr.height]="n.r * 2"
-                [attr.transform]="'rotate(45 ' + n.x + ' ' + n.y + ')'"
-              />
-            } @else {
-              <circle class="punto" [attr.cx]="n.x" [attr.cy]="n.y" [attr.r]="n.r" />
-            }
-            <text class="etiqueta" [attr.x]="n.x" [attr.y]="n.etiquetaY">{{ n.codigo }}</text>
-          </g>
-        }
-      </svg>
-    </div>
+      </figcaption>
+    </figure>
   `,
   styles: `
-    :host { display: block; }
-    .contenedor { overflow-x: auto; }
-    svg { display: block; width: 100%; min-width: 760px; height: auto; font-family: inherit; }
-
-    .rio-borde { fill: none; stroke: #cfe6ea; stroke-width: 22; stroke-linecap: round; }
-    .rio { fill: none; stroke: var(--viru-canal); stroke-width: 9; stroke-linecap: round; }
-    .nombre-rio { font-size: 13px; font-weight: 600; fill: var(--viru-canal); font-stretch: 112%; }
-    .canal { stroke: #7fb6bf; stroke-width: 3; stroke-linecap: round; }
-
-    .nodo { cursor: pointer; outline: none; }
-    .punto { stroke: #fff; stroke-width: 2.5; transition: r 0.15s; }
-    .EN_LINEA .punto { fill: var(--viru-palta); }
-    .SIN_SENAL .punto { fill: var(--viru-alerta); }
-    .SIN_DATOS .punto { fill: #fff; stroke: var(--viru-gris); stroke-width: 2.5; stroke-dasharray: 3 2; }
-
-    .anillo { fill: none; stroke: transparent; stroke-width: 2.5; }
-    .nodo:hover .anillo, .nodo:focus-visible .anillo { stroke: #9fc9cf; }
-    .elegido .anillo { stroke: var(--viru-agua) !important; }
-
-    .etiqueta { font-size: 11px; text-anchor: middle; fill: var(--viru-texto-2); font-variant-numeric: tabular-nums; }
-    .elegido .etiqueta { fill: var(--viru-agua); font-weight: 700; }
-    .SIN_SENAL .etiqueta { fill: var(--viru-alerta); font-weight: 600; }
-
-    .pulso { fill: none; stroke: var(--viru-palta); stroke-width: 2; animation: pulso 1.6s ease-out forwards; transform-box: fill-box; transform-origin: center; }
-    @keyframes pulso { from { opacity: 0.9; transform: scale(1); } to { opacity: 0; transform: scale(3.2); } }
+    figure { margin: 16px 0 0; }
+    .herramientas, figcaption {
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px 16px;
+      color: var(--viru-texto-2); font-size: .82rem;
+    }
+    .herramientas { margin-bottom: 10px; }
+    figcaption { margin: 8px 0 2px; }
+    .enlaces { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+    a, .enlaces button { color: var(--viru-canal); font-weight: 650; }
+    .enlaces button {
+      font: inherit; font-weight: 650; border: 1px solid var(--viru-linea);
+      border-radius: 8px; padding: 5px 10px; background: #fff; cursor: pointer;
+    }
+    .visor {
+      overflow: auto; max-height: min(76vh, 750px); border: 1px solid var(--viru-linea);
+      border-radius: 12px; background: #f0f4f3; overscroll-behavior-inline: contain;
+    }
+    .plano {
+      position: relative; width: min(100%, 880px); min-width: 560px; margin-inline: auto;
+      aspect-ratio: 1540 / 1285; overflow: hidden;
+    }
+    .ampliado .plano { width: max(100%, 1280px); }
+    img { position: absolute; top: -7.08%; left: 0; width: 132.987%; max-width: none; height: auto; }
+    .punto {
+      position: absolute; width: 17px; height: 17px; transform: translate(-50%, -50%);
+      box-shadow: 0 0 0 1px #fff, inset 0 0 0 1px #fff;
+      border-radius: 50%; border: 2px solid #526b75; background: transparent; cursor: pointer; padding: 0;
+    }
+    .punto.EN_LINEA { border-color: #25824a; }
+    .punto.SIN_SENAL, .punto.caudal-alto { border-color: #b3261b; }
+    .punto.actual, .punto:hover, .punto:focus-visible {
+      z-index: 2; outline: 2px solid #10333e; outline-offset: 2px;
+    }
+    .punto.reciente { box-shadow: 0 0 0 4px #4fb3c485; }
   `,
 })
 export class EsquemaRed {
-  dispositivos = input.required<DispositivoEstado[]>();
-  seleccionadoId = input<number | null>(null);
-  ultimaLectura = input<LecturaEnVivo | null>(null);
-  seleccionar = output<number>();
-
-  readonly rioY = rioY;
-  readonly textoSenal: Record<EstadoSenal, string> = {
-    EN_LINEA: 'en línea',
-    SIN_SENAL: 'sin señal',
-    SIN_DATOS: 'sin datos',
-  };
-
-  readonly rioPath = (() => {
-    const pts: string[] = [];
-    for (let x = 20; x <= ANCHO_RIO; x += 10) pts.push(`${x},${rioY(x).toFixed(1)}`);
-    return `M${pts.join(' L')}`;
-  })();
-
-  /** Los canales se reparten a lo largo del río, alternando arriba y abajo. */
-  canales = computed<Nodo[]>(() => {
-    const lista = this.dispositivos()
-      .filter((d) => d.tipo === 'CAUDALIMETRO_CANAL')
-      .sort((a, b) => a.codigo.localeCompare(b.codigo));
-    const inicio = 60;
-    const paso = lista.length > 1 ? (ANCHO_RIO - 2 * inicio) / (lista.length - 1) : 0;
-    return lista.map((d, i) => {
-      const desdeX = inicio + i * paso;
-      const arriba = i % 2 === 0;
-      const x = desdeX + 10;
-      const y = rioY(desdeX) + (arriba ? -78 : 78);
-      return {
-        id: d.dispositivoId,
-        codigo: d.codigo,
-        senal: d.senal,
-        x,
-        y,
-        r: 8,
-        desdeX,
-        desdeY: rioY(desdeX),
-        etiquetaY: arriba ? y - 15 : y + 23,
-      };
-    });
-  });
-
-  /** Sensores de río: sobre el cauce, entre canales. */
-  rios = computed<Nodo[]>(() => {
-    const lista = this.dispositivos()
-      .filter((d) => d.tipo === 'CAUDALIMETRO_RIO')
-      .sort((a, b) => a.codigo.localeCompare(b.codigo));
-    // Se ubican justo entre dos canales para que no se tapen
-    const nCanales = Math.max(this.canales().length, 2);
-    const paso = (ANCHO_RIO - 120) / (nCanales - 1);
-    return lista.map((d, i) => {
-      const k = Math.round(((i + 0.5) * nCanales) / lista.length - 0.5);
-      const x = 60 + (Math.min(k, nCanales - 2) + 0.5) * paso;
-      const y = rioY(x);
-      return { id: d.dispositivoId, codigo: d.codigo, senal: d.senal, x, y, r: 11, etiquetaY: y + 32 };
-    });
-  });
-
-  /** Estación meteorológica: fuera del cauce, a la derecha. */
-  meteo = computed<Nodo[]>(() =>
-    this.dispositivos()
-      .filter((d) => d.tipo === 'ESTACION_METEO')
-      .map((d, i) => ({
-        id: d.dispositivoId,
-        codigo: d.codigo,
-        senal: d.senal,
-        x: 1040,
-        y: 64 + i * 70,
-        r: 10,
-        etiquetaY: 64 + i * 70 + 30,
-      })),
+  readonly ruta = 'mapas/viru-pcg-01.png';
+  readonly dispositivos = input.required<DispositivoEstado[]>();
+  readonly seleccionadoId = input<number | null>(null);
+  readonly ultimaLectura = input<LecturaEnVivo | null>(null);
+  readonly seleccionar = output<number>();
+  readonly ampliado = signal(false);
+  readonly seleccionado = computed(() =>
+    this.dispositivos().find((d) => d.dispositivoId === this.seleccionadoId()),
   );
 
-  todos = computed(() => [...this.canales(), ...this.rios(), ...this.meteo()]);
-
-  /** Un círculo que se expande donde llegó la última lectura. */
-  pulso = computed(() => {
-    const l = this.ultimaLectura();
-    if (!l) return [];
-    const n = this.todos().find((x) => x.id === l.dispositivoId);
-    return n ? [{ clave: `${l.dispositivoId}-${l.medidoEn}`, x: n.x, y: n.y, r: n.r }] : [];
+  readonly nodos = computed(() => {
+    const porCodigo = new Map(this.dispositivos().map((d) => [d.codigo, d]));
+    return PUNTOS_PC2.flatMap(([codigo, referencia, x, y]) => {
+      const dispositivo = porCodigo.get(codigo);
+      if (!dispositivo) return [];
+      const nombre = dispositivo.nombreCanal ? ` · ${dispositivo.nombreCanal}` : '';
+      return [{
+        dispositivo,
+        x: (x / 1540) * 100,
+        y: ((y - 91) / 1285) * 100,
+        etiqueta: `${codigo}${nombre} (${referencia}) · ${SENAL_LABEL[dispositivo.senal]}`,
+      }];
+    });
   });
-
-  esMeteo(n: Nodo): boolean {
-    return this.meteo().some((m) => m.id === n.id);
-  }
 }

@@ -4,7 +4,9 @@ const NOMBRES: Record<string, string> = {
   caudal: 'Caudal',
   nivel: 'Nivel',
   distancia: 'Distancia al agua',
+  distance_mm: 'Distancia al agua',
   bateria: 'Batería',
+  battery_pct: 'Batería',
   temperatura: 'Temperatura',
   humedad: 'Humedad',
   precipitacion: 'Precipitación',
@@ -24,10 +26,15 @@ export function formatoVariable(v: Variable): string {
 
 /** Variable que se grafica para cada tipo de dispositivo. */
 export function variablePrincipal(tipo: TipoDispositivo, variables: Variable[]): Variable | null {
-  const preferida = tipo === 'ESTACION_METEO' ? 'temperatura' : 'caudal';
+  const esMeteo = tipo === 'ESTACION_METEO';
+  const preferida = esMeteo ? 'temperatura' : 'caudal';
+  const distancia = esMeteo
+    ? undefined
+    : variables.find((v) => v.nombre.toLowerCase() === 'distance_mm');
   return (
     variables.find((v) => v.nombre.toLowerCase() === preferida) ??
-    variables.find((v) => v.nombre.toLowerCase() !== 'bateria') ??
+    distancia ??
+    variables.find((v) => !['bateria', 'battery_pct'].includes(v.nombre.toLowerCase())) ??
     variables[0] ??
     null
   );
